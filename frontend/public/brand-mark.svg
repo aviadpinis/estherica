@@ -1,0 +1,17 @@
+<svg width="540" height="540" viewBox="0 0 540 540" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="270" cy="270" r="250" fill="#EEDFCC"/>
+  <circle cx="270" cy="270" r="249" stroke="#111111" stroke-width="2" stroke-dasharray="10 10"/>
+  <path d="M190 180C190 131.399 229.399 92 278 92H326C374.601 92 414 131.399 414 180V232C414 280.601 374.601 320 326 320H278C229.399 320 190 280.601 190 232V180Z" fill="#111111"/>
+  <ellipse cx="301.5" cy="226" rx="95.5" ry="112" fill="#F6E6D3"/>
+  <path d="M252 205C262.667 196.333 274.667 192 288 192C301.333 192 313.333 196.333 324 205" stroke="#111111" stroke-width="6" stroke-linecap="round"/>
+  <path d="M257 248C267.667 255.333 278 259 288 259C298 259 308.333 255.333 319 248" stroke="#111111" stroke-width="6" stroke-linecap="round"/>
+  <path d="M228 214C236.667 209.333 245 207 253 207" stroke="#111111" stroke-width="6" stroke-linecap="round"/>
+  <path d="M323 207C331 207 339.333 209.333 348 214" stroke="#111111" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="254" cy="224" r="10" stroke="#111111" stroke-width="5"/>
+  <circle cx="322" cy="224" r="10" stroke="#111111" stroke-width="5"/>
+  <path d="M264 224H312" stroke="#111111" stroke-width="5" stroke-linecap="round"/>
+  <path d="M220 330C241.333 353.333 264 365 288 365C312 365 334.667 353.333 356 330" stroke="#111111" stroke-width="6" stroke-linecap="round"/>
+  <text x="270" y="410" text-anchor="middle" font-size="74" font-weight="700" font-family="Arial, sans-serif" fill="#111111">אסתריקה</text>
+  <text x="270" y="450" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#111111">לעילוי נשמות אסתר מגידו ז"ל</text>
+  <text x="270" y="486" text-anchor="middle" font-size="28" font-family="Arial, sans-serif" fill="#111111">פינוק ליולדת</text>
+</svg>
