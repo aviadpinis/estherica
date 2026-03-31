@@ -21,8 +21,7 @@ def ensure_bootstrap_admin(db: Session) -> None:
         db.commit()
         return
 
-    if not admin.password_hash:
-        admin.password_hash = password_hash
-        if not admin.full_name:
-            admin.full_name = "מנהלת ראשית"
-        db.commit()
+    admin.password_hash = password_hash
+    if not admin.full_name:
+        admin.full_name = "מנהלת ראשית"
+    db.commit()
