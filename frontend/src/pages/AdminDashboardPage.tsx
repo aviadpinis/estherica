@@ -91,6 +91,43 @@ function buildIntakeLink(token: string) {
   return `${window.location.origin}/intake/${token}`
 }
 
+function buildWhatsAppLink(message: string) {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+}
+
+function buildIntakeShareMessage(train: MealTrainDetail | MealTrainSummary) {
+  return `היי, מזל טוב!\nכדי לפתוח את הלוח שלך, מלאי בבקשה את השאלון כאן:\n${buildIntakeLink(train.intake_token)}`
+}
+
+function buildSignupShareMessage(train: MealTrainDetail | MealTrainSummary) {
+  const babyCopy = getBabyCopy(train.baby_type)
+  return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:\n${buildPublicLink(train.public_token)}`
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="whatsapp-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M20 11.9C20 16.3 16.4 19.9 12 19.9C10.7 19.9 9.4 19.6 8.3 19L4.5 20L5.6 16.4C4.9 15.1 4.6 13.7 4.6 12.2C4.6 7.8 8.2 4.2 12.6 4.2C17 4.2 20.6 7.8 20.6 12.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.4 8.8C9.7 8.1 10 8 10.3 8C10.5 8 10.8 8 11 8.1C11.2 8.1 11.4 8.2 11.5 8.5C11.7 8.9 12 9.9 12 10C12.1 10.2 12 10.4 11.9 10.5C11.8 10.7 11.6 10.9 11.5 11C11.4 11.1 11.2 11.3 11.4 11.6C11.6 11.9 12.1 12.8 12.9 13.5C13.9 14.3 14.7 14.6 15 14.8C15.3 14.9 15.5 14.9 15.7 14.7C15.9 14.5 16.5 13.8 16.7 13.5C16.9 13.3 17 13.2 17.3 13.3C17.5 13.4 18.8 14 19 14.1C19.2 14.2 19.4 14.3 19.4 14.5C19.4 14.7 19.2 15.7 18.5 16.3C17.8 16.8 16.8 17 15.8 16.7C14.8 16.4 13.4 15.9 12 14.7C10.3 13.3 9.2 11.6 8.9 10.9C8.6 10.2 8.9 9.6 9.4 8.8Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 function getInitialNotificationPermission() {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return "unsupported" as const
@@ -301,10 +338,10 @@ export function AdminDashboardPage() {
       }
 
       if (!previous && train.intake_submitted) {
-        setFeedback(`השאלון של ${train.family_title} הושלם ונכנס למערכת.`)
+        setFeedback(`השאלון של ${train.family_title} הושלם, והלוח נפתח אוטומטית להשתבצות.`)
         if (notificationPermission === "granted") {
           new Notification("שאלון חדש הושלם", {
-            body: `${train.family_title} מילאה את השאלון. אפשר לבדוק את הימים ולפרסם.`,
+            body: `${train.family_title} מילאה את השאלון. אפשר כבר לשתף את לוח ההשתבצות.`,
           })
         }
       }
@@ -362,7 +399,7 @@ export function AdminDashboardPage() {
         token,
       ),
     onSuccess: (created) => {
-      setFeedback("המקרה נפתח ונוצר קישור אישי ליולדת.")
+      setFeedback("המקרה נפתח. נשאר רק לשלוח ליולדת את קישור השאלון.")
       createForm.reset({
         family_title: "",
         mother_name: "",
@@ -396,21 +433,6 @@ export function AdminDashboardPage() {
       ),
     onSuccess: (updated) => {
       setFeedback("פרטי המקרה עודכנו.")
-      queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
-      queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
-      queryClient.setQueryData(["meal-train", updated.id], updated)
-    },
-  })
-
-  const publishMutation = useMutation({
-    mutationFn: () =>
-      apiRequest<MealTrainDetail>(
-        `/api/admin/meal-trains/${selectedTrainId}/publish`,
-        { method: "POST" },
-        token,
-      ),
-    onSuccess: (updated) => {
-      setFeedback("הקישור הציבורי פורסם ומוכן לשיתוף.")
       queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
       queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
       queryClient.setQueryData(["meal-train", updated.id], updated)
@@ -569,7 +591,6 @@ export function AdminDashboardPage() {
     (createMutation.error as ApiError | null)?.message ||
     (createAdminMutation.error as ApiError | null)?.message ||
     (updateTrainMutation.error as ApiError | null)?.message ||
-    (publishMutation.error as ApiError | null)?.message ||
     (addDayMutation.error as ApiError | null)?.message ||
     (updateDayMutation.error as ApiError | null)?.message ||
     (updateGiftMutation.error as ApiError | null)?.message ||
@@ -579,6 +600,7 @@ export function AdminDashboardPage() {
     (overviewQuery.error as ApiError | null)?.message
 
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
+  const isSignupReady = selectedTrain?.status === "published"
 
   return (
     <PageShell
@@ -753,23 +775,49 @@ export function AdminDashboardPage() {
                       העתקת קישור ליולדת
                     </button>
                     <button
-                      className="button button--ghost"
+                      className="button button--ghost button--whatsapp"
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(buildPublicLink(selectedTrain.public_token))
-                        setFeedback("הקישור הציבורי הועתק.")
+                        window.open(
+                          buildWhatsAppLink(buildIntakeShareMessage(selectedTrain)),
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
                       }}
                     >
-                      העתקת קישור ציבורי
+                      <WhatsAppIcon />
+                      שליחה ליולדת בוואטסאפ
                     </button>
-                    <button
-                      className="button button--primary"
-                      type="button"
-                      disabled={publishMutation.isPending}
-                      onClick={() => publishMutation.mutate()}
-                    >
-                      {selectedTrain.status === "published" ? "הקישור כבר מפורסם" : "פרסום הקישור הציבורי"}
-                    </button>
+                    {isSignupReady ? (
+                      <>
+                        <button
+                          className="button button--ghost"
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(buildPublicLink(selectedTrain.public_token))
+                            setFeedback("קישור ההשתבצות הועתק.")
+                          }}
+                        >
+                          העתקת קישור השתבצות
+                        </button>
+                        <button
+                          className="button button--primary button--whatsapp"
+                          type="button"
+                          onClick={() => {
+                            window.open(
+                              buildWhatsAppLink(buildSignupShareMessage(selectedTrain)),
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }}
+                        >
+                          <WhatsAppIcon />
+                          שיתוף ההשתבצות בוואטסאפ
+                        </button>
+                      </>
+                    ) : (
+                      <p className="muted">אחרי שהיולדת תמלא את השאלון, לוח ההשתבצות ייפתח אוטומטית.</p>
+                    )}
                   </div>
                 </div>
 
@@ -798,10 +846,16 @@ export function AdminDashboardPage() {
                           <strong>קישור אישי:</strong>
                         </p>
                         <code>{buildIntakeLink(selectedTrain.intake_token)}</code>
-                        <p>
-                          <strong>קישור ציבורי:</strong>
-                        </p>
-                        <code>{buildPublicLink(selectedTrain.public_token)}</code>
+                        {isSignupReady ? (
+                          <>
+                            <p>
+                              <strong>קישור השתבצות:</strong>
+                            </p>
+                            <code>{buildPublicLink(selectedTrain.public_token)}</code>
+                          </>
+                        ) : (
+                          <p className="muted">קישור ההשתבצות ייפתח אוטומטית מיד אחרי מילוי השאלון.</p>
+                        )}
                       </div>
                     </article>
 

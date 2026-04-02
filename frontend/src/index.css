@@ -253,6 +253,17 @@ img {
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
+.button--whatsapp {
+  gap: 0.55rem;
+}
+
+.whatsapp-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  color: #25d366;
+}
+
 .button:hover {
   transform: translateY(-1px);
 }

@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { z } from "zod"
 
 import { MealCalendar } from "../components/MealCalendar"
@@ -41,6 +41,7 @@ type IntakeValues = z.infer<typeof intakeSchema>
 export function MotherIntakePage() {
   const { token = "" } = useParams()
   const [showThankYou, setShowThankYou] = useState(false)
+  const [submittedPublicToken, setSubmittedPublicToken] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<IntakeTab>("details")
 
   const intakeQuery = useQuery({
@@ -107,7 +108,8 @@ export function MotherIntakePage() {
         method: "POST",
         body: JSON.stringify(values),
       }),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      setSubmittedPublicToken(response.public_token)
       setShowThankYou(true)
     },
   })
@@ -141,18 +143,24 @@ export function MotherIntakePage() {
         {showThankYou ? (
           <section className="thank-you-card">
             <p className="eyebrow">הטופס נקלט בהצלחה</p>
-            <h3>תודה רבה, מעבירים למבשלות</h3>
+            <h3>תודה רבה, הלוח פתוח למבשלות</h3>
             <p>
-              קיבלנו את כל הפרטים שלך, והמנהלת תבדוק שהימים שפתחת אכן נכונים לפני
-              פרסום בקבוצת הוואטסאפ.
+              קיבלנו את כל הפרטים שלך, והלוח נפתח אוטומטית לשיתוף ולהשתבצות.
             </p>
-            <button
-              className="button button--ghost"
-              type="button"
-              onClick={() => setShowThankYou(false)}
-            >
-              חזרה לטופס
-            </button>
+            <div className="form-actions form-actions--split">
+              {submittedPublicToken ? (
+                <Link className="button button--primary" to={`/t/${submittedPublicToken}`}>
+                  מעבר ללוח ההשתבצות
+                </Link>
+              ) : null}
+              <button
+                className="button button--ghost"
+                type="button"
+                onClick={() => setShowThankYou(false)}
+              >
+                חזרה לטופס
+              </button>
+            </div>
           </section>
         ) : null}
 

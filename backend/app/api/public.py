@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -139,6 +139,8 @@ def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeRe
         family_title=train.family_title,
         mother_name=train.mother_name,
         baby_type=train.baby_type.value if train.baby_type else None,
+        status=train.status.value,
+        public_token=train.public_token,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -195,12 +197,19 @@ def submit_intake_form(
         if payload.delivery_deadline:
             day.delivery_deadline = payload.delivery_deadline
 
+    if train.status != MealTrainStatus.published:
+        train.status = MealTrainStatus.published
+        if train.published_at is None:
+            train.published_at = datetime.now(UTC)
+
     db.commit()
     db.refresh(train)
     return PublicIntakeResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
         baby_type=train.baby_type.value if train.baby_type else None,
+        status=train.status.value,
+        public_token=train.public_token,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,

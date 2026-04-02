@@ -150,6 +150,8 @@ class PublicIntakeResponse(BaseModel):
     family_title: str
     mother_name: str | None
     baby_type: str | None
+    status: str
+    public_token: str
     start_date: date
     default_delivery_time: str
     reminder_time: str

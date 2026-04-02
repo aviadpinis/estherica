@@ -88,6 +88,8 @@ export interface PublicIntakeData {
   family_title: string
   mother_name: string | null
   baby_type: BabyType | null
+  status: MealTrainStatus
+  public_token: string
   start_date: string
   default_delivery_time: string
   reminder_time: string
