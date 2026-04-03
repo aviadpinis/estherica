@@ -22,7 +22,7 @@ export function PublicLobbyPage() {
             ילדתי
           </Link>
           <Link to="/admin/login" className="button button--ghost">
-            כניסת מנהלת
+            כניסה
           </Link>
         </div>
         <Link to="/" className="topbar__brand">
@@ -41,11 +41,12 @@ export function PublicLobbyPage() {
           <div className="section-heading">
             <div>
               <p className="eyebrow">יולדות</p>
-              <h3>להשתבץ לפינוק</h3>
+              <h3>בא לך להשתבץ לפינוק?</h3>
             </div>
+            <p className="muted">לא נדרש להתחבר בשביל להשתבץ.</p>
           </div>
 
-          {lobbyQuery.isLoading ? <p className="muted">טוען את הלוחות...</p> : null}
+          {lobbyQuery.isLoading ? <p className="muted">טוען...</p> : null}
 
           {trains.length ? (
             <div className="lobby-carousel">

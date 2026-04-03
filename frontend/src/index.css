@@ -1104,7 +1104,7 @@ button.calendar-card {
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
   max-width: 100%;
-  direction: ltr;
+  direction: rtl;
 }
 
 .lobby-carousel__track {

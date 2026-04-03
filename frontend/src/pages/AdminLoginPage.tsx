@@ -45,8 +45,8 @@ export function AdminLoginPage() {
 
   return (
     <PageShell
-      title="כניסת מנהלת"
-      subtitle="בגרסת ה-MVP רק למסך הניהול יש התחברות. ליולדת ולמשתבצות אין login."
+      title="כניסה"
+      subtitle="לא נדרש להתחבר בשביל להשתבץ. הכניסה כאן מיועדת רק למנהלות."
       actions={
         <Link to="/" className="button button--ghost">
           חזרה לאתר
@@ -81,4 +81,3 @@ export function AdminLoginPage() {
     </PageShell>
   )
 }
-
