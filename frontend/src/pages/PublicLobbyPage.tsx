@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
 
@@ -13,32 +12,7 @@ export function PublicLobbyPage() {
     queryKey: ["public-lobby"],
     queryFn: () => apiRequest<PublicLobbyTrain[]>("/api/public/lobby"),
   })
-  const carouselRef = useRef<HTMLDivElement | null>(null)
   const trains = lobbyQuery.data ?? []
-  const carouselTrains = trains.length > 1 ? [...trains, ...trains] : trains
-
-  useEffect(() => {
-    const element = carouselRef.current
-    if (!element || trains.length <= 1) {
-      return
-    }
-
-    const handleScroll = () => {
-      const halfWidth = element.scrollWidth / 2
-      if (!halfWidth) {
-        return
-      }
-
-      if (element.scrollLeft >= halfWidth) {
-        element.scrollLeft -= halfWidth
-      } else if (element.scrollLeft <= 0) {
-        element.scrollLeft += halfWidth
-      }
-    }
-
-    element.addEventListener("scroll", handleScroll, { passive: true })
-    return () => element.removeEventListener("scroll", handleScroll)
-  }, [trains.length])
 
   return (
     <div className="page-shell public-lobby">
@@ -74,47 +48,47 @@ export function PublicLobbyPage() {
           {lobbyQuery.isLoading ? <p className="muted">טוען את הלוחות...</p> : null}
 
           {trains.length ? (
-            <div className="lobby-carousel" ref={carouselRef}>
+            <div className="lobby-carousel">
               <div className="lobby-carousel__track">
-                {carouselTrains.map((train, index) => {
-                const babyCopy = getBabyCopy(train.baby_type)
-                const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
-                const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
-                const isOpen = train.open_days > 0
+                {trains.map((train) => {
+                  const babyCopy = getBabyCopy(train.baby_type)
+                  const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
+                  const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
+                  const isOpen = train.open_days > 0
 
-                return (
-                  <article
-                    key={`${train.public_token}-${index}`}
-                    className={`lobby-card lobby-card--${train.baby_type ?? "neutral"}`}
-                  >
-                    <div className="lobby-card__header">
-                      <p className="eyebrow">מפנקות את {train.family_title}</p>
-                      <span className={`status ${isOpen ? "status--open" : "status--completed"}`}>
-                        {isOpen ? "פתוח להרשמה" : "פעיל ומלא"}
-                      </span>
-                    </div>
+                  return (
+                    <article
+                      key={train.public_token}
+                      className={`lobby-card lobby-card--${train.baby_type ?? "neutral"}`}
+                    >
+                      <div className="lobby-card__header">
+                        <p className="eyebrow">מפנקות את {train.family_title}</p>
+                        <span className={`status ${isOpen ? "status--open" : "status--completed"}`}>
+                          {isOpen ? "פתוח להרשמה" : "פעיל ומלא"}
+                        </span>
+                      </div>
 
-                    <div className="lobby-card__body">
-                      <h3>מזל טוב {babyCopy.blessing}</h3>
-                      {isOpen ? (
-                        <p className="muted">
-                          {train.open_days} ימים פנויים
-                          {nextOpenLabel ? ` · הקרוב ביותר ${nextOpenLabel}` : ""}
-                        </p>
-                      ) : (
-                        <p className="muted">
-                          מלא כרגע
-                          {endLabel ? ` · עד ${endLabel}` : ""}.
-                        </p>
-                      )}
-                      <p className="muted">{formatDatePair(train.start_date).short}</p>
-                    </div>
+                      <div className="lobby-card__body">
+                        <h3>מזל טוב {babyCopy.blessing}</h3>
+                        {isOpen ? (
+                          <p className="muted">
+                            {train.open_days} ימים פנויים
+                            {nextOpenLabel ? ` · הקרוב ביותר ${nextOpenLabel}` : ""}
+                          </p>
+                        ) : (
+                          <p className="muted">
+                            מלא כרגע
+                            {endLabel ? ` · עד ${endLabel}` : ""}.
+                          </p>
+                        )}
+                        <p className="muted">{formatDatePair(train.start_date).short}</p>
+                      </div>
 
-                    <Link className="button button--ghost" to={`/t/${train.public_token}`}>
-                      {isOpen ? "להשתבץ" : "לצפייה בלוח"}
-                    </Link>
-                  </article>
-                )
+                      <Link className="button button--ghost" to={`/t/${train.public_token}`}>
+                        {isOpen ? "להשתבץ" : "לצפייה בלוח"}
+                      </Link>
+                    </article>
+                  )
                 })}
               </div>
             </div>
