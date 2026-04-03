@@ -31,6 +31,7 @@
 
 html {
   direction: rtl;
+  overflow-x: hidden;
 }
 
 body {
@@ -39,6 +40,7 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background: transparent;
+  overflow-x: hidden;
 }
 
 a {
@@ -64,6 +66,7 @@ img {
 
 #root {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .eyebrow {
@@ -85,6 +88,7 @@ img {
 .public-lobby {
   display: grid;
   gap: 18px;
+  overflow-x: hidden;
 }
 
 .landing__hero {
@@ -1089,24 +1093,21 @@ button.calendar-card {
 
 .lobby-carousel {
   position: relative;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-top: 18px;
   padding-bottom: 8px;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 
 .lobby-carousel__track {
   display: flex;
   gap: 16px;
   width: max-content;
-  will-change: transform;
-}
-
-.lobby-carousel__track--animated {
-  animation: lobby-carousel-scroll 36s linear infinite;
-}
-
-.lobby-carousel:hover .lobby-carousel__track--animated {
-  animation-play-state: paused;
+  padding-inline: 2px 6px;
 }
 
 .lobby-card {
@@ -1114,6 +1115,7 @@ button.calendar-card {
   gap: 18px;
   padding: 20px;
   flex: 0 0 320px;
+  scroll-snap-align: start;
   border-radius: 26px;
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.8);
@@ -1140,16 +1142,6 @@ button.calendar-card {
 
 .lobby-card--neutral {
   background: linear-gradient(180deg, rgba(249, 240, 232, 0.95), rgba(238, 225, 208, 0.92));
-}
-
-@keyframes lobby-carousel-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-50% - 8px));
-  }
 }
 
 .empty-state {

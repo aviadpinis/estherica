@@ -50,7 +50,7 @@ export function PublicLobbyPage() {
 
           {trains.length ? (
             <div className="lobby-carousel">
-              <div className={`lobby-carousel__track ${trains.length > 1 ? "lobby-carousel__track--animated" : ""}`}>
+              <div className="lobby-carousel__track">
                 {carouselTrains.map((train, index) => {
                 const babyCopy = getBabyCopy(train.baby_type)
                 const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
