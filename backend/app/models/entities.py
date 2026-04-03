@@ -56,6 +56,7 @@ class MealTrain(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     family_title: Mapped[str] = mapped_column(EncryptedValue(), nullable=False)
     mother_name: Mapped[str | None] = mapped_column(EncryptedValue(), nullable=True)
+    contact_phone: Mapped[str | None] = mapped_column(EncryptedValue(), nullable=True)
     baby_type: Mapped[BabyType | None] = mapped_column(Enum(BabyType), nullable=True)
     status: Mapped[MealTrainStatus] = mapped_column(
         Enum(MealTrainStatus),

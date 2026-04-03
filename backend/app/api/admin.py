@@ -65,6 +65,7 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
         id=train.id,
         family_title=train.family_title,
         mother_name=train.mother_name,
+        contact_phone=train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
         status=train.status.value,
         start_date=train.start_date,
@@ -92,6 +93,7 @@ def _build_detail(train: MealTrain) -> MealTrainDetail:
         id=train.id,
         family_title=train.family_title,
         mother_name=train.mother_name,
+        contact_phone=train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
         status=train.status.value,
         start_date=train.start_date,
@@ -257,6 +259,7 @@ def create_meal_train(
     train = MealTrain(
         family_title=payload.family_title,
         mother_name=payload.mother_name,
+        contact_phone=payload.contact_phone,
         baby_type=BabyType(payload.baby_type) if payload.baby_type else None,
         start_date=payload.start_date,
         default_delivery_time=payload.default_delivery_time,
@@ -299,7 +302,7 @@ def update_meal_train(
     if "baby_type" in updates:
         train.baby_type = BabyType(updates["baby_type"]) if updates["baby_type"] else None
 
-    for field in ("family_title", "mother_name", "default_delivery_time", "reminder_time", "gift_delivered"):
+    for field in ("family_title", "mother_name", "contact_phone", "default_delivery_time", "reminder_time", "gift_delivered"):
         if field in updates:
             setattr(train, field, updates[field])
 

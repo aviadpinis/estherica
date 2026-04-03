@@ -52,6 +52,7 @@ class MealTrainSummary(BaseModel):
     id: int
     family_title: str
     mother_name: str | None
+    contact_phone: str | None
     baby_type: str | None
     status: str
     start_date: date
@@ -77,6 +78,7 @@ class MealTrainDetail(BaseModel):
     id: int
     family_title: str
     mother_name: str | None
+    contact_phone: str | None
     baby_type: str | None
     status: str
     start_date: date
@@ -96,6 +98,7 @@ class MealTrainDetail(BaseModel):
 class MealTrainCreate(BaseModel):
     family_title: str
     mother_name: str | None = None
+    contact_phone: str | None = None
     baby_type: str | None = None
     start_date: date
     default_delivery_time: str
@@ -105,6 +108,7 @@ class MealTrainCreate(BaseModel):
 class MealTrainUpdate(BaseModel):
     family_title: str | None = None
     mother_name: str | None = None
+    contact_phone: str | None = None
     baby_type: str | None = None
     default_delivery_time: str | None = None
     reminder_time: str | None = None
@@ -149,6 +153,7 @@ class IntakeSubmission(BaseModel):
 class PublicIntakeResponse(BaseModel):
     family_title: str
     mother_name: str | None
+    contact_phone: str | None
     baby_type: str | None
     status: str
     public_token: str

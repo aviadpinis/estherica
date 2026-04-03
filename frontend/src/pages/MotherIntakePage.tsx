@@ -90,7 +90,7 @@ export function MotherIntakePage() {
       children_ages: "",
       special_requirements: "",
       kashrut: "",
-      contact_phone: "",
+      contact_phone: intakeQuery.data.contact_phone ?? "",
       home_phone: "",
       backup_phone: "",
       delivery_deadline: intakeQuery.data.default_delivery_time,

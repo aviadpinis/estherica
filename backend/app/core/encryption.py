@@ -11,7 +11,7 @@ from app.core.config import get_settings
 
 ENCRYPTED_PREFIX = "enc::"
 SENSITIVE_COLUMNS: dict[str, tuple[str, ...]] = {
-    "meal_trains": ("family_title", "mother_name"),
+    "meal_trains": ("family_title", "mother_name", "contact_phone"),
     "intake_forms": (
         "address",
         "household_size",

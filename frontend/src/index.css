@@ -1087,17 +1087,33 @@ button.calendar-card {
   margin-bottom: 16px;
 }
 
-.lobby-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+.lobby-carousel {
+  position: relative;
+  overflow: hidden;
   margin-top: 18px;
+  padding-bottom: 8px;
+}
+
+.lobby-carousel__track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  will-change: transform;
+}
+
+.lobby-carousel__track--animated {
+  animation: lobby-carousel-scroll 36s linear infinite;
+}
+
+.lobby-carousel:hover .lobby-carousel__track--animated {
+  animation-play-state: paused;
 }
 
 .lobby-card {
   display: grid;
   gap: 18px;
   padding: 20px;
+  flex: 0 0 320px;
   border-radius: 26px;
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.8);
@@ -1124,6 +1140,16 @@ button.calendar-card {
 
 .lobby-card--neutral {
   background: linear-gradient(180deg, rgba(249, 240, 232, 0.95), rgba(238, 225, 208, 0.92));
+}
+
+@keyframes lobby-carousel-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 8px));
+  }
 }
 
 .empty-state {
@@ -1288,6 +1314,10 @@ button.calendar-card {
 
   .calendar-row {
     min-width: 920px;
+  }
+
+  .lobby-card {
+    flex-basis: 280px;
   }
 
   .lobby-card__header {

@@ -12,6 +12,8 @@ export function PublicLobbyPage() {
     queryKey: ["public-lobby"],
     queryFn: () => apiRequest<PublicLobbyTrain[]>("/api/public/lobby"),
   })
+  const trains = lobbyQuery.data ?? []
+  const carouselTrains = trains.length > 1 ? [...trains, ...trains] : trains
 
   return (
     <div className="page-shell public-lobby">
@@ -30,15 +32,6 @@ export function PublicLobbyPage() {
       </header>
 
       <main className="page-shell__body">
-        <section className="hero-card">
-          <p className="eyebrow">לובי הקהילה</p>
-          <h2>כאן רואים מי צריכה פינוק עכשיו</h2>
-          <p>
-            יולדות חדשות שמחכות להשתבצות, וגם יולדות שכבר התמלאו אבל הפרויקט שלהן
-            עדיין פעיל בשבועיים הקרובים.
-          </p>
-        </section>
-
         {lobbyQuery.error ? (
           <p className="feedback feedback--error">
             {(lobbyQuery.error as ApiError).message}
@@ -48,17 +41,17 @@ export function PublicLobbyPage() {
         <section className="panel">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">יולדות פעילות</p>
-              <h3>לוחות פתוחים ופרויקטים פעילים</h3>
+              <p className="eyebrow">יולדות</p>
+              <h3>להשתבץ לפינוק</h3>
             </div>
-            <p className="muted">הכרטיסים עם ימים פנויים מופיעים ראשונים.</p>
           </div>
 
           {lobbyQuery.isLoading ? <p className="muted">טוען את הלוחות...</p> : null}
 
-          {lobbyQuery.data?.length ? (
-            <div className="lobby-grid">
-              {lobbyQuery.data.map((train) => {
+          {trains.length ? (
+            <div className="lobby-carousel">
+              <div className={`lobby-carousel__track ${trains.length > 1 ? "lobby-carousel__track--animated" : ""}`}>
+                {carouselTrains.map((train, index) => {
                 const babyCopy = getBabyCopy(train.baby_type)
                 const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
                 const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
@@ -66,7 +59,7 @@ export function PublicLobbyPage() {
 
                 return (
                   <article
-                    key={train.public_token}
+                    key={`${train.public_token}-${index}`}
                     className={`lobby-card lobby-card--${train.baby_type ?? "neutral"}`}
                   >
                     <div className="lobby-card__header">
@@ -85,14 +78,11 @@ export function PublicLobbyPage() {
                         </p>
                       ) : (
                         <p className="muted">
-                          כל הימים נתפסו, אבל ממשיכים לפנק
-                          {endLabel ? ` עד ${endLabel}` : ""}.
+                          מלא כרגע
+                          {endLabel ? ` · עד ${endLabel}` : ""}.
                         </p>
                       )}
-                      <p className="muted">
-                        התחלה: {formatDatePair(train.start_date).short}
-                        {endLabel ? ` · סיום: ${endLabel}` : ""}
-                      </p>
+                      <p className="muted">{formatDatePair(train.start_date).short}</p>
                     </div>
 
                     <Link className="button button--ghost" to={`/t/${train.public_token}`}>
@@ -100,14 +90,12 @@ export function PublicLobbyPage() {
                     </Link>
                   </article>
                 )
-              })}
+                })}
+              </div>
             </div>
           ) : (
             <div className="empty-state">
               <h3>כרגע אין יולדות פעילות בלובי</h3>
-              <p className="muted">
-                אם ילדת, אפשר לפתוח כאן בעצמך את טופס היולדת ולעדכן את המנהלות.
-              </p>
               <Link to="/birth-notice" className="button button--primary">
                 ילדתי
               </Link>

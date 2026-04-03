@@ -138,6 +138,7 @@ def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeRe
     return PublicIntakeResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
+        contact_phone=train.intake_form.contact_phone if train.intake_form else train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
         status=train.status.value,
         public_token=train.public_token,
@@ -160,6 +161,7 @@ def submit_intake_form(
         train.mother_name = payload.mother_name
     if payload.baby_type:
         train.baby_type = BabyType(payload.baby_type)
+    train.contact_phone = payload.contact_phone
 
     if train.intake_form is None:
         intake_form = IntakeForm(
@@ -207,6 +209,7 @@ def submit_intake_form(
     return PublicIntakeResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
+        contact_phone=train.intake_form.contact_phone if train.intake_form else train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
         status=train.status.value,
         public_token=train.public_token,

@@ -25,6 +25,7 @@ const babyTypeSchema = z.enum(["boy", "girl"]).or(z.literal(""))
 const createTrainSchema = z.object({
   family_title: z.string().min(2, "צריך כותרת"),
   mother_name: z.string().optional(),
+  contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
   start_date: z.string().min(1, "צריך תאריך התחלה"),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -34,6 +35,7 @@ const createTrainSchema = z.object({
 const editTrainSchema = z.object({
   family_title: z.string().min(2, "צריך כותרת"),
   mother_name: z.string().optional(),
+  contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -91,15 +93,49 @@ function buildIntakeLink(token: string) {
   return `${window.location.origin}/intake/${token}`
 }
 
-function buildWhatsAppLink(message: string) {
+function normalizeWhatsAppPhone(phone: string | null | undefined) {
+  if (!phone) {
+    return null
+  }
+
+  let digits = phone.trim().replace(/[^\d+]/g, "")
+  if (!digits) {
+    return null
+  }
+
+  if (digits.startsWith("+")) {
+    digits = digits.slice(1)
+  }
+
+  if (digits.startsWith("00")) {
+    digits = digits.slice(2)
+  }
+
+  if (digits.startsWith("0")) {
+    digits = `972${digits.slice(1)}`
+  }
+
+  if (!/^\d{8,15}$/.test(digits)) {
+    return null
+  }
+
+  return digits
+}
+
+function buildWhatsAppLink(message: string, phone?: string | null) {
+  const normalizedPhone = normalizeWhatsAppPhone(phone)
+  if (normalizedPhone) {
+    return `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
+  }
+
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 }
 
-function buildIntakeShareMessage(train: MealTrainDetail | MealTrainSummary) {
+function buildIntakeShareMessage(train: MealTrainDetail) {
   return `היי, מזל טוב!\nכדי לפתוח את הלוח שלך, מלאי בבקשה את השאלון כאן:\n${buildIntakeLink(train.intake_token)}`
 }
 
-function buildSignupShareMessage(train: MealTrainDetail | MealTrainSummary) {
+function buildSignupShareMessage(train: MealTrainDetail) {
   const babyCopy = getBabyCopy(train.baby_type)
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:\n${buildPublicLink(train.public_token)}`
 }
@@ -241,6 +277,7 @@ export function AdminDashboardPage() {
     defaultValues: {
       family_title: "",
       mother_name: "",
+      contact_phone: "",
       baby_type: "",
       start_date: new Date().toISOString().slice(0, 10),
       default_delivery_time: "18:00",
@@ -253,6 +290,7 @@ export function AdminDashboardPage() {
     defaultValues: {
       family_title: "",
       mother_name: "",
+      contact_phone: "",
       baby_type: "",
       default_delivery_time: "18:00",
       reminder_time: "09:00",
@@ -359,6 +397,7 @@ export function AdminDashboardPage() {
     editForm.reset({
       family_title: train.family_title,
       mother_name: train.mother_name ?? "",
+      contact_phone: train.contact_phone ?? "",
       baby_type: train.baby_type ?? "",
       default_delivery_time: train.default_delivery_time,
       reminder_time: train.reminder_time,
@@ -393,6 +432,7 @@ export function AdminDashboardPage() {
           method: "POST",
           body: JSON.stringify({
             ...values,
+            contact_phone: values.contact_phone || null,
             baby_type: values.baby_type || null,
           }),
         },
@@ -403,6 +443,7 @@ export function AdminDashboardPage() {
       createForm.reset({
         family_title: "",
         mother_name: "",
+        contact_phone: "",
         baby_type: "",
         start_date: new Date().toISOString().slice(0, 10),
         default_delivery_time: "18:00",
@@ -426,6 +467,7 @@ export function AdminDashboardPage() {
           method: "PATCH",
           body: JSON.stringify({
             ...values,
+            contact_phone: values.contact_phone || null,
             baby_type: values.baby_type || null,
           }),
         },
@@ -601,6 +643,7 @@ export function AdminDashboardPage() {
 
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const isSignupReady = selectedTrain?.status === "published"
+  const shareableMotherPhone = selectedTrain?.intake_form?.contact_phone ?? selectedTrain?.contact_phone ?? null
 
   return (
     <PageShell
@@ -779,14 +822,14 @@ export function AdminDashboardPage() {
                       type="button"
                       onClick={() => {
                         window.open(
-                          buildWhatsAppLink(buildIntakeShareMessage(selectedTrain)),
+                          buildWhatsAppLink(buildIntakeShareMessage(selectedTrain), shareableMotherPhone),
                           "_blank",
                           "noopener,noreferrer",
                         )
                       }}
                     >
                       <WhatsAppIcon />
-                      שליחה ליולדת בוואטסאפ
+                      {shareableMotherPhone ? "פתיחת שיחה עם היולדת בוואטסאפ" : "שיתוף ליולדת בוואטסאפ"}
                     </button>
                     {isSignupReady ? (
                       <>
@@ -843,6 +886,9 @@ export function AdminDashboardPage() {
                           <strong>סטטוס:</strong> {selectedTrain.intake_form ? "מולא בהצלחה" : "ממתין למילוי"}
                         </p>
                         <p>
+                          <strong>פלאפון לשיתוף:</strong> {shareableMotherPhone || "לא הוזן עדיין"}
+                        </p>
+                        <p>
                           <strong>קישור אישי:</strong>
                         </p>
                         <code>{buildIntakeLink(selectedTrain.intake_token)}</code>
@@ -886,7 +932,12 @@ export function AdminDashboardPage() {
                           </p>
                         </div>
                       ) : (
-                        <p className="muted">ברגע שהיולדת תמלא את השאלון, כאן יופיעו כל הפרטים הרלוונטיים.</p>
+                        <div className="detail-list">
+                          <p className="muted">ברגע שהיולדת תמלא את השאלון, כאן יופיעו כל הפרטים הרלוונטיים.</p>
+                          <p>
+                            <strong>פלאפון ראשוני:</strong> {selectedTrain.contact_phone || "לא נרשם"}
+                          </p>
+                        </div>
                       )}
                     </article>
 
@@ -981,6 +1032,13 @@ export function AdminDashboardPage() {
                           <span>שם היולדת</span>
                           <input {...editForm.register("mother_name")} />
                         </label>
+                        <label className="field">
+                          <span>פלאפון יולדת</span>
+                          <input {...editForm.register("contact_phone")} placeholder="050..." />
+                        </label>
+                      </div>
+
+                      <div className="field-row">
                         <label className="field">
                           <span>מה נולד</span>
                           <select {...editForm.register("baby_type")}>
@@ -1179,6 +1237,13 @@ export function AdminDashboardPage() {
                   <input {...createForm.register("mother_name")} placeholder="אופציונלי" />
                 </label>
                 <label className="field">
+                  <span>פלאפון יולדת</span>
+                  <input {...createForm.register("contact_phone")} placeholder="050..." />
+                </label>
+              </div>
+
+              <div className="field-row">
+                <label className="field">
                   <span>מה נולד</span>
                   <select {...createForm.register("baby_type")}>
                     <option value="">היולדת תמלא</option>
@@ -1216,7 +1281,7 @@ export function AdminDashboardPage() {
                 <p className="eyebrow">איך זה עובד</p>
                 <h3>שלבים קצרים וברורים</h3>
               </div>
-              <p className="muted">1. פותחים מקרה חדש. 2. שולחים ליולדת את הקישור האישי. 3. אחרי שהשאלון הושלם בודקים את הלוח ומפרסמים לקהילה.</p>
+              <p className="muted">1. פותחים מקרה חדש. 2. אם יש פלאפון, פותחים מיד שיחה עם היולדת בוואטסאפ. 3. אחרי שהשאלון הושלם משתפים את לוח ההשתבצות למבשלות.</p>
               <p className="muted">אם את רוצה לעבור למקרה קיים ולעדכן יום מסוים, זה נמצא בטאב "יולדות".</p>
             </div>
           </article>

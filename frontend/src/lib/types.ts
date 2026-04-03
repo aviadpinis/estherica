@@ -43,6 +43,7 @@ export interface MealTrainSummary {
   id: number
   family_title: string
   mother_name: string | null
+  contact_phone: string | null
   baby_type: BabyType | null
   status: MealTrainStatus
   start_date: string
@@ -68,6 +69,7 @@ export interface MealTrainDetail {
   id: number
   family_title: string
   mother_name: string | null
+  contact_phone: string | null
   baby_type: BabyType | null
   status: MealTrainStatus
   start_date: string
@@ -87,6 +89,7 @@ export interface MealTrainDetail {
 export interface PublicIntakeData {
   family_title: string
   mother_name: string | null
+  contact_phone: string | null
   baby_type: BabyType | null
   status: MealTrainStatus
   public_token: string
