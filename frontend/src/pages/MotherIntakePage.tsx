@@ -246,6 +246,19 @@ export function MotherIntakePage() {
     setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
   }
 
+  function handleFormSubmit(values: IntakeValues) {
+    const neededDays = values.day_choices.filter((choice) => choice.needed).length
+    if (values.day_choices.length > 0 && neededDays === 0) {
+      const confirmed = window.confirm("כל הימים מסומנים כרגע 'לא צריך'. לשלוח ככה את השאלון?")
+      if (!confirmed) {
+        setActiveTab("calendar")
+        return
+      }
+    }
+
+    submitMutation.mutate(values)
+  }
+
   return (
     <PageShell
       title="טופס יולדת"
@@ -285,7 +298,7 @@ export function MotherIntakePage() {
         ) : null}
 
         {intakeQuery.data && !showThankYou ? (
-          <form className="form-grid" onSubmit={handleSubmit((values) => submitMutation.mutate(values))}>
+          <form className="form-grid" onSubmit={handleSubmit(handleFormSubmit)}>
             <section className="section-tabs section-tabs--two" aria-label="ניווט טופס יולדת">
               <button
                 className={`section-tabs__button ${activeTab === "details" ? "section-tabs__button--active" : ""}`}

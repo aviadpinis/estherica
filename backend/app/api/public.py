@@ -179,6 +179,8 @@ def submit_intake_form(
 ) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
     before_counts = _day_status_counts(train)
+    needed_count = sum(1 for choice in payload.day_choices if choice.needed)
+    not_needed_count = len(payload.day_choices) - needed_count
 
     if not payload.is_twins and not payload.baby_type:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="צריך לבחור מה נולד.")
@@ -234,14 +236,19 @@ def submit_intake_form(
     db.commit()
     db.refresh(train)
     after_counts = _day_status_counts(train)
-    logger.info(
-        "intake_submitted train_id=%s is_twins=%s baby_type=%s status_before=%s status_after=%s choices=%s",
+    log_level = logging.WARNING if needed_count == 0 and payload.day_choices else logging.INFO
+    logger.log(
+        log_level,
+        "intake_submitted train_id=%s is_twins=%s baby_type=%s status_before=%s status_after=%s choices=%s needed=%s not_needed=%s all_not_needed=%s",
         train.id,
         train.is_twins,
         train.baby_type.value if train.baby_type else "mixed",
         before_counts,
         after_counts,
         len(payload.day_choices),
+        needed_count,
+        not_needed_count,
+        needed_count == 0 and len(payload.day_choices) > 0,
     )
     return PublicIntakeResponse(
         family_title=train.family_title,
