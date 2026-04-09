@@ -217,24 +217,9 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
             </section>
 
             <section className="panel panel--nested calendar-panel">
-              <div className="section-heading section-heading--calendar">
-                <div>
-                  <p className="eyebrow">לוח ההשתבצות</p>
-                  <h4>גררי ימינה ושמאלה כדי לראות את כל הימים</h4>
-                </div>
-                <p className="muted">
-                  {ownSignups.length
-                    ? `יש לך ${ownSignups.length} השתבצויות פעילות בלוח`
-                    : hasOpenDays
-                      ? "לחצי על יום פנוי כדי להשתבץ"
-                      : "כרגע אין ימים פנויים בלוח"}
-                </p>
-              </div>
-              <div className="calendar-scroll-hint" aria-hidden="true">
-                <span>→</span>
-                <span>הלוח נגרר לצדדים</span>
-                <span>←</span>
-              </div>
+              <p className="calendar-panel__title">
+                {hasOpenDays ? "לחצי על יום פנוי כדי להשתבץ" : "כרגע אין ימים פנויים בלוח"}
+              </p>
               <MealCalendar
                 startDate={trainQuery.data.start_date}
                 days={trainQuery.data.days}
