@@ -126,7 +126,7 @@ export function MealCalendar({
       .filter(Boolean)
       .join(" ")
 
-    const volunteerName = mode === "admin" ? cell.day?.signup?.volunteer_name : null
+    const volunteerName = mode !== "intake" ? cell.day?.signup?.volunteer_name : null
     const isOwnedByCurrentVolunteer = mode === "public" && Boolean(cell.day && ownedDayIds.includes(cell.day.id))
     const interactive =
       cell.day &&
@@ -157,8 +157,12 @@ export function MealCalendar({
           {mode !== "intake" && state === "not-needed" ? <span>לא צריך</span> : null}
           {state === "assigned" ? <span>תפוס</span> : null}
         </div>
-        {volunteerName ? <div className="calendar-card__signup">{volunteerName}</div> : null}
-        {isOwnedByCurrentVolunteer ? <div className="calendar-card__signup">ההשתבצות שלך</div> : null}
+        {volunteerName ? (
+          <div className="calendar-card__signup">
+            {volunteerName}
+            {isOwnedByCurrentVolunteer ? " · ההשתבצות שלך" : ""}
+          </div>
+        ) : null}
       </>
     )
 
