@@ -171,9 +171,10 @@ function buildIntakeShareMessage(train: MealTrainDetail) {
   return `היי, מזל טוב!\nכדי לפתוח את הלוח שלך, מלאי בבקשה את השאלון כאן:\n${buildIntakeLink(train.intake_token)}`
 }
 
-function buildSignupShareMessage(train: MealTrainDetail) {
+function buildSignupShareMessage(train: MealTrainDetail, options?: { includeLink?: boolean }) {
   const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
-  return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:\n${buildPublicLink(train.public_token)}`
+  const includeLink = options?.includeLink ?? true
+  return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:${includeLink ? `\n${buildPublicLink(train.public_token)}` : ""}`
 }
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -871,7 +872,8 @@ export function AdminDashboardPage() {
 
   async function shareForVolunteers(train: MealTrainDetail) {
     const shareUrl = buildPublicLink(train.public_token)
-    const shareText = buildSignupShareMessage(train)
+    const shareText = buildSignupShareMessage(train, { includeLink: false })
+    const whatsappText = buildSignupShareMessage(train)
 
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
@@ -889,7 +891,7 @@ export function AdminDashboardPage() {
     }
 
     window.open(
-      buildWhatsAppLink(shareText),
+      buildWhatsAppLink(whatsappText),
       "_blank",
       "noopener,noreferrer",
     )
