@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, type ReactNode } from "react"
+import { useEffect } from "react"
 
 import type { AuthResponse } from "./types"
 
@@ -6,6 +7,7 @@ interface StoredAuth {
   token: string
   email: string
   fullName: string | null
+  expiresAt: number
 }
 
 interface AuthContextValue {
@@ -18,8 +20,14 @@ interface AuthContextValue {
 
 const storageKey = "estherica-admin-auth"
 const lastEmailKey = "estherica-admin-last-email"
+const sessionDurationMs = 20 * 60 * 1000
+const refreshThresholdMs = 60 * 1000
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+
+function getNextExpiry() {
+  return Date.now() + sessionDurationMs
+}
 
 function readStoredAuth(): StoredAuth | null {
   if (typeof window === "undefined") {
@@ -32,7 +40,12 @@ function readStoredAuth(): StoredAuth | null {
   }
 
   try {
-    return JSON.parse(raw) as StoredAuth
+    const parsed = JSON.parse(raw) as StoredAuth
+    if (!parsed.expiresAt || parsed.expiresAt <= Date.now()) {
+      window.localStorage.removeItem(storageKey)
+      return null
+    }
+    return parsed
   } catch {
     window.localStorage.removeItem(storageKey)
     return null
@@ -59,14 +72,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [adminEmail, setAdminEmail] = useState<string | null>(initialState?.email ?? null)
   const [adminFullName, setAdminFullName] = useState<string | null>(initialState?.fullName ?? null)
 
-  function login(payload: AuthResponse) {
+  function persistSession(currentToken: string, currentEmail: string, currentFullName: string | null) {
     const nextState: StoredAuth = {
-      token: payload.access_token,
-      email: payload.admin.email,
-      fullName: payload.admin.full_name,
+      token: currentToken,
+      email: currentEmail,
+      fullName: currentFullName,
+      expiresAt: getNextExpiry(),
     }
     window.localStorage.setItem(storageKey, JSON.stringify(nextState))
-    window.localStorage.setItem(lastEmailKey, nextState.email)
+    window.localStorage.setItem(lastEmailKey, currentEmail)
+    return nextState
+  }
+
+  function login(payload: AuthResponse) {
+    const nextState = persistSession(payload.access_token, payload.admin.email, payload.admin.full_name)
     setToken(nextState.token)
     setAdminEmail(nextState.email)
     setAdminFullName(nextState.fullName)
@@ -78,6 +97,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAdminEmail(null)
     setAdminFullName(null)
   }
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !token || !adminEmail) {
+      return
+    }
+
+    let lastRefresh = Date.now()
+
+    const refreshSession = () => {
+      if (Date.now() - lastRefresh < refreshThresholdMs) {
+        return
+      }
+      persistSession(token, adminEmail, adminFullName)
+      lastRefresh = Date.now()
+    }
+
+    const checkExpiration = () => {
+      const stored = readStoredAuth()
+      if (!stored) {
+        logout()
+      }
+    }
+
+    const intervalId = window.setInterval(checkExpiration, 30_000)
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "mousemove", "touchstart", "scroll"]
+
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, refreshSession, { passive: true })
+    })
+
+    return () => {
+      window.clearInterval(intervalId)
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, refreshSession)
+      })
+    }
+  }, [adminEmail, adminFullName, token])
 
   return (
     <AuthContext.Provider value={{ token, adminEmail, adminFullName, login, logout }}>
