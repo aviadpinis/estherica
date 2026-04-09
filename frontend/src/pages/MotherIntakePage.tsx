@@ -12,9 +12,11 @@ import { getBabyCopy, getBirthChoice, getTwinsChoice, resolveBirthSelection, typ
 import { getLocalTodayIso } from "../lib/date"
 import {
   clampScheduleStartDate,
+  getDefaultScheduleStartDate,
   getEarliestScheduleStartDate,
   getLatestScheduleStartDate,
   getScheduleWindowError,
+  isWeekendScheduleDate,
 } from "../lib/scheduleWindow"
 import type { BabyTone, MealDay, PublicIntakeData } from "../lib/types"
 
@@ -141,6 +143,8 @@ export function MotherIntakePage() {
     watch,
     getValues,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<IntakeValues>({
     resolver: zodResolver(intakeSchema),
@@ -262,6 +266,8 @@ export function MotherIntakePage() {
 
   const selectionByDate = Object.fromEntries(dayChoices.map((choice) => [choice.date, choice.needed]))
   const selectionMap = Object.fromEntries(displayDays.map((day) => [day.id, selectionByDate[day.date] ?? true]))
+  const birthDateField = register("birth_date")
+  const startDateField = register("start_date")
 
   function toggleNeeded(day: MealDay) {
     const nextChoices = getValues("day_choices").map((choice) =>
@@ -280,6 +286,35 @@ export function MotherIntakePage() {
     const next = resolveBirthSelection("twins", choice)
     setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
     setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleBirthDateChange(nextBirthDate: string) {
+    setValue("birth_date", nextBirthDate, { shouldDirty: true, shouldValidate: true })
+    const nextStartDate = clampScheduleStartDate(nextBirthDate, startDate)
+    if (nextStartDate !== startDate) {
+      setValue("start_date", nextStartDate || getDefaultScheduleStartDate(nextBirthDate), {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }
+
+  function handleStartDateChange(nextStartDate: string) {
+    if (!nextStartDate) {
+      setValue("start_date", "", { shouldDirty: true, shouldValidate: true })
+      return
+    }
+
+    if (isWeekendScheduleDate(nextStartDate)) {
+      setError("start_date", {
+        type: "manual",
+        message: "לא ניתן לבחור שישי או שבת לפתיחת הלוח",
+      })
+      return
+    }
+
+    clearErrors("start_date")
+    setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
   }
 
   function handleFormSubmit(values: IntakeValues) {
@@ -408,16 +443,28 @@ export function MotherIntakePage() {
                 <div className="field-row field-row--keep">
                   <label className="field">
                     <span>תאריך הלידה</span>
-                    <input type="date" max={todayIso} {...register("birth_date")} />
+                    <input
+                      type="date"
+                      name={birthDateField.name}
+                      ref={birthDateField.ref}
+                      onBlur={birthDateField.onBlur}
+                      value={birthDate || ""}
+                      max={todayIso}
+                      onChange={(event) => handleBirthDateChange(event.target.value)}
+                    />
                     {errors.birth_date ? <small>{errors.birth_date.message}</small> : null}
                   </label>
                   <label className="field">
                     <span>ממתי לפתוח את הלוח</span>
                     <input
                       type="date"
+                      name={startDateField.name}
+                      ref={startDateField.ref}
+                      onBlur={startDateField.onBlur}
+                      value={startDate || ""}
                       min={birthDate ? getEarliestScheduleStartDate(birthDate) : undefined}
                       max={birthDate ? getLatestScheduleStartDate(birthDate) : undefined}
-                      {...register("start_date")}
+                      onChange={(event) => handleStartDateChange(event.target.value)}
                     />
                     {errors.start_date ? <small>{errors.start_date.message}</small> : null}
                   </label>

@@ -11,9 +11,11 @@ import { getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice
 import { getLocalTodayIso } from "../lib/date"
 import {
   clampScheduleStartDate,
+  getDefaultScheduleStartDate,
   getEarliestScheduleStartDate,
   getLatestScheduleStartDate,
   getScheduleWindowError,
+  isWeekendScheduleDate,
 } from "../lib/scheduleWindow"
 import type { BabyTone, BabyType, PublicBirthNoticeResponse } from "../lib/types"
 
@@ -96,6 +98,35 @@ export function PublicBirthNoticePage() {
     form.setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
   }
 
+  function handleBirthDateChange(nextBirthDate: string) {
+    form.setValue("birth_date", nextBirthDate, { shouldDirty: true, shouldValidate: true })
+    const nextStartDate = clampScheduleStartDate(nextBirthDate, startDate)
+    if (nextStartDate !== startDate) {
+      form.setValue("start_date", nextStartDate || getDefaultScheduleStartDate(nextBirthDate), {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }
+
+  function handleStartDateChange(nextStartDate: string) {
+    if (!nextStartDate) {
+      form.setValue("start_date", "", { shouldDirty: true, shouldValidate: true })
+      return
+    }
+
+    if (isWeekendScheduleDate(nextStartDate)) {
+      form.setError("start_date", {
+        type: "manual",
+        message: "לא ניתן לבחור שישי או שבת לפתיחת הלוח",
+      })
+      return
+    }
+
+    form.clearErrors("start_date")
+    form.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+  }
+
   useEffect(() => {
     if (!birthDate) {
       return
@@ -117,6 +148,8 @@ export function PublicBirthNoticePage() {
       navigate(`/intake/${response.intake_token}`)
     },
   })
+  const birthDateField = form.register("birth_date")
+  const startDateField = form.register("start_date")
 
   return (
     <PageShell
@@ -184,7 +217,15 @@ export function PublicBirthNoticePage() {
 
           <label className="field">
             <span>תאריך הלידה</span>
-            <input type="date" max={getLocalTodayIso()} {...form.register("birth_date")} />
+            <input
+              type="date"
+              name={birthDateField.name}
+              ref={birthDateField.ref}
+              onBlur={birthDateField.onBlur}
+              value={birthDate || ""}
+              max={getLocalTodayIso()}
+              onChange={(event) => handleBirthDateChange(event.target.value)}
+            />
             {form.formState.errors.birth_date ? (
               <small>{form.formState.errors.birth_date.message}</small>
             ) : null}
@@ -194,9 +235,13 @@ export function PublicBirthNoticePage() {
             <span>ממתי לפתוח את הלוח</span>
             <input
               type="date"
+              name={startDateField.name}
+              ref={startDateField.ref}
+              onBlur={startDateField.onBlur}
+              value={startDate || ""}
               min={birthDate ? getEarliestScheduleStartDate(birthDate) : undefined}
               max={birthDate ? getLatestScheduleStartDate(birthDate) : undefined}
-              {...form.register("start_date")}
+              onChange={(event) => handleStartDateChange(event.target.value)}
             />
             {form.formState.errors.start_date ? (
               <small>{form.formState.errors.start_date.message}</small>

@@ -24,9 +24,32 @@ export function getEarliestScheduleStartDate(birthDate: string) {
   return formatIsoDate(earliestDate)
 }
 
-function isWeekend(value: string) {
+export function isWeekendScheduleDate(value: string) {
   const date = parseIsoDate(value)
   return date.getDay() === 5 || date.getDay() === 6
+}
+
+export function getDefaultScheduleStartDate(birthDate: string) {
+  const minDate = getEarliestScheduleStartDate(birthDate)
+  const maxDate = getLatestScheduleStartDate(birthDate)
+  let nextDate = minDate
+  while (isWeekendScheduleDate(nextDate) && nextDate <= maxDate) {
+    const advancedDate = parseIsoDate(nextDate)
+    advancedDate.setDate(advancedDate.getDate() + 1)
+    nextDate = formatIsoDate(advancedDate)
+  }
+  return nextDate <= maxDate ? nextDate : minDate
+}
+
+export function getLastAllowedScheduleStartDate(birthDate: string) {
+  const minDate = getEarliestScheduleStartDate(birthDate)
+  let nextDate = getLatestScheduleStartDate(birthDate)
+  while (isWeekendScheduleDate(nextDate) && nextDate >= minDate) {
+    const previousDate = parseIsoDate(nextDate)
+    previousDate.setDate(previousDate.getDate() - 1)
+    nextDate = formatIsoDate(previousDate)
+  }
+  return nextDate >= minDate ? nextDate : getDefaultScheduleStartDate(birthDate)
 }
 
 export function clampScheduleStartDate(birthDate: string, startDate: string) {
@@ -36,31 +59,13 @@ export function clampScheduleStartDate(birthDate: string, startDate: string) {
 
   const minDate = getEarliestScheduleStartDate(birthDate)
   const maxDate = getLatestScheduleStartDate(birthDate)
-  let nextDate = startDate || minDate
-  if (nextDate < minDate) {
-    nextDate = minDate
+  if (!startDate || startDate < minDate) {
+    return getDefaultScheduleStartDate(birthDate)
   }
-  if (nextDate > maxDate) {
-    nextDate = maxDate
+  if (startDate > maxDate) {
+    return getLastAllowedScheduleStartDate(birthDate)
   }
-
-  while (isWeekend(nextDate) && nextDate <= maxDate) {
-    const advancedDate = parseIsoDate(nextDate)
-    advancedDate.setDate(advancedDate.getDate() + 1)
-    nextDate = formatIsoDate(advancedDate)
-  }
-
-  while ((nextDate > maxDate || isWeekend(nextDate)) && nextDate >= minDate) {
-    const previousDate = parseIsoDate(nextDate)
-    previousDate.setDate(previousDate.getDate() - 1)
-    nextDate = formatIsoDate(previousDate)
-  }
-
-  if (nextDate < minDate) {
-    return minDate
-  }
-
-  return nextDate
+  return startDate
 }
 
 export function getScheduleWindowError(birthDate: string, startDate: string) {
@@ -73,7 +78,7 @@ export function getScheduleWindowError(birthDate: string, startDate: string) {
   if (startDate < minDate || startDate > maxDate) {
     return "אפשר לבחור פתיחת לוח מהיום שאחרי הלידה ועד 8 ימים אחריה"
   }
-  if (isWeekend(startDate)) {
+  if (isWeekendScheduleDate(startDate)) {
     return "לא ניתן לפתוח את הלוח בשישי או שבת"
   }
   return null

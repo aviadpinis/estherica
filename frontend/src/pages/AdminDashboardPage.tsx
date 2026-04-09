@@ -13,9 +13,11 @@ import { getBabyCopy, getBabyTone, getBirthChoice, getTwinsChoice, resolveBirthS
 import { formatDatePair, getLocalTodayIso } from "../lib/date"
 import {
   clampScheduleStartDate,
+  getDefaultScheduleStartDate,
   getEarliestScheduleStartDate,
   getLatestScheduleStartDate,
   getScheduleWindowError,
+  isWeekendScheduleDate,
 } from "../lib/scheduleWindow"
 import type {
   AdminAccount,
@@ -924,6 +926,10 @@ export function AdminDashboardPage() {
   const editBirthChoice = getBirthChoice(editBabyType || null, editIsTwins)
   const createTwinsChoice = getTwinsChoice(createBabyType || null, createIsTwins)
   const editTwinsChoice = getTwinsChoice(editBabyType || null, editIsTwins)
+  const createBirthDateField = createForm.register("birth_date")
+  const createStartDateField = createForm.register("start_date")
+  const editBirthDateField = editForm.register("birth_date")
+  const editStartDateField = editForm.register("start_date")
   const activeTrains = sortTrainSummaries(trainsQuery.data?.filter((train) => !train.is_archived) ?? [])
   const archivedTrains = trainsQuery.data?.filter((train) => train.is_archived) ?? []
   const totalTrackedDays = activeTrains.reduce((total, train) => total + train.total_days, 0)
@@ -1009,6 +1015,35 @@ export function AdminDashboardPage() {
     createForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
   }
 
+  function handleCreateBirthDateChange(nextBirthDate: string) {
+    createForm.setValue("birth_date", nextBirthDate, { shouldDirty: true, shouldValidate: true })
+    const nextStartDate = clampScheduleStartDate(nextBirthDate, createStartDate)
+    if (nextStartDate !== createStartDate) {
+      createForm.setValue("start_date", nextStartDate || getDefaultScheduleStartDate(nextBirthDate), {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }
+
+  function handleCreateStartDateChange(nextStartDate: string) {
+    if (!nextStartDate) {
+      createForm.setValue("start_date", "", { shouldDirty: true, shouldValidate: true })
+      return
+    }
+
+    if (isWeekendScheduleDate(nextStartDate)) {
+      createForm.setError("start_date", {
+        type: "manual",
+        message: "לא ניתן לבחור שישי או שבת לפתיחת הלוח",
+      })
+      return
+    }
+
+    createForm.clearErrors("start_date")
+    createForm.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+  }
+
   function handleEditBirthChoice(choice: BirthChoice) {
     const next = resolveBirthSelection(choice, editTwinsChoice)
     editForm.setValue("is_twins", next.isTwins, { shouldDirty: true, shouldValidate: true })
@@ -1019,6 +1054,35 @@ export function AdminDashboardPage() {
     const next = resolveBirthSelection("twins", choice)
     editForm.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
     editForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleEditBirthDateChange(nextBirthDate: string) {
+    editForm.setValue("birth_date", nextBirthDate, { shouldDirty: true, shouldValidate: true })
+    const nextStartDate = clampScheduleStartDate(nextBirthDate, editStartDate)
+    if (nextStartDate !== editStartDate) {
+      editForm.setValue("start_date", nextStartDate || getDefaultScheduleStartDate(nextBirthDate), {
+        shouldDirty: true,
+        shouldValidate: true,
+      })
+    }
+  }
+
+  function handleEditStartDateChange(nextStartDate: string) {
+    if (!nextStartDate) {
+      editForm.setValue("start_date", "", { shouldDirty: true, shouldValidate: true })
+      return
+    }
+
+    if (isWeekendScheduleDate(nextStartDate)) {
+      editForm.setError("start_date", {
+        type: "manual",
+        message: "לא ניתן לבחור שישי או שבת לפתיחת הלוח",
+      })
+      return
+    }
+
+    editForm.clearErrors("start_date")
+    editForm.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
   }
 
   useEffect(() => {
@@ -1477,7 +1541,15 @@ export function AdminDashboardPage() {
                       <div className="field-row">
                         <label className="field">
                           <span>תאריך לידה</span>
-                          <input type="date" max={todayIso} {...editForm.register("birth_date")} />
+                          <input
+                            type="date"
+                            name={editBirthDateField.name}
+                            ref={editBirthDateField.ref}
+                            onBlur={editBirthDateField.onBlur}
+                            value={editBirthDate || ""}
+                            max={todayIso}
+                            onChange={(event) => handleEditBirthDateChange(event.target.value)}
+                          />
                           {editForm.formState.errors.birth_date ? (
                             <small>{editForm.formState.errors.birth_date.message}</small>
                           ) : null}
@@ -1486,9 +1558,13 @@ export function AdminDashboardPage() {
                           <span>ממתי לפתוח את הלוח</span>
                           <input
                             type="date"
+                            name={editStartDateField.name}
+                            ref={editStartDateField.ref}
+                            onBlur={editStartDateField.onBlur}
+                            value={editStartDate || ""}
                             min={editBirthDate ? getEarliestScheduleStartDate(editBirthDate) : undefined}
                             max={editBirthDate ? getLatestScheduleStartDate(editBirthDate) : undefined}
-                            {...editForm.register("start_date")}
+                            onChange={(event) => handleEditStartDateChange(event.target.value)}
                           />
                           {editForm.formState.errors.start_date ? (
                             <small>{editForm.formState.errors.start_date.message}</small>
@@ -1760,19 +1836,31 @@ export function AdminDashboardPage() {
               <div className="field-row">
                 <label className="field">
                   <span>תאריך הלידה</span>
-                  <input type="date" max={todayIso} {...createForm.register("birth_date")} />
+                  <input
+                    type="date"
+                    name={createBirthDateField.name}
+                    ref={createBirthDateField.ref}
+                    onBlur={createBirthDateField.onBlur}
+                    value={createBirthDate || ""}
+                    max={todayIso}
+                    onChange={(event) => handleCreateBirthDateChange(event.target.value)}
+                  />
                   {createForm.formState.errors.birth_date ? (
                     <small>{createForm.formState.errors.birth_date.message}</small>
                   ) : null}
                 </label>
                 <label className="field">
                   <span>ממתי לפתוח את הלוח</span>
-                    <input
-                      type="date"
-                      min={createBirthDate ? getEarliestScheduleStartDate(createBirthDate) : undefined}
-                      max={createBirthDate ? getLatestScheduleStartDate(createBirthDate) : undefined}
-                      {...createForm.register("start_date")}
-                    />
+                  <input
+                    type="date"
+                    name={createStartDateField.name}
+                    ref={createStartDateField.ref}
+                    onBlur={createStartDateField.onBlur}
+                    value={createStartDate || ""}
+                    min={createBirthDate ? getEarliestScheduleStartDate(createBirthDate) : undefined}
+                    max={createBirthDate ? getLatestScheduleStartDate(createBirthDate) : undefined}
+                    onChange={(event) => handleCreateStartDateChange(event.target.value)}
+                  />
                   {createForm.formState.errors.start_date ? (
                     <small>{createForm.formState.errors.start_date.message}</small>
                   ) : null}
