@@ -28,6 +28,7 @@ from app.services.meal_trains import (
     DEFAULT_REMINDER_TIME,
     build_default_days,
     generate_token,
+    sync_default_days,
 )
 
 
@@ -104,6 +105,7 @@ def _build_related_trains(db: Session, current_train_id: int) -> list[PublicMeal
             PublicMealTrainSuggestion(
                 family_title=train.family_title,
                 baby_type=train.baby_type.value if train.baby_type else None,
+                is_twins=train.is_twins,
                 public_token=train.public_token,
                 open_days=len(open_days),
                 next_open_date=open_days[0].date,
@@ -129,6 +131,7 @@ def _build_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
     return PublicLobbyTrainResponse(
         family_title=train.family_title,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         public_token=train.public_token,
         start_date=train.start_date,
         end_date=end_date,
@@ -147,6 +150,7 @@ def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeRe
         mother_name=train.mother_name,
         contact_phone=train.intake_form.contact_phone if train.intake_form else train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         status=train.status.value,
         public_token=train.public_token,
         start_date=train.start_date,
@@ -168,7 +172,9 @@ def submit_intake_form(
         train.mother_name = payload.mother_name
     if payload.baby_type:
         train.baby_type = BabyType(payload.baby_type)
+    train.is_twins = payload.is_twins
     train.contact_phone = payload.contact_phone
+    sync_default_days(train, payload.delivery_deadline or train.default_delivery_time)
 
     if train.intake_form is None:
         intake_form = IntakeForm(
@@ -198,11 +204,11 @@ def submit_intake_form(
         intake_form.delivery_deadline = payload.delivery_deadline
         intake_form.general_notes = payload.general_notes
 
-    choice_map = {choice.day_id: choice.needed for choice in payload.day_choices}
+    choice_map = {choice.date: choice.needed for choice in payload.day_choices}
     for day in train.days:
-        if day.id not in choice_map or day.status == MealDayStatus.assigned:
+        if day.date not in choice_map or day.status == MealDayStatus.assigned:
             continue
-        day.status = MealDayStatus.open if choice_map[day.id] else MealDayStatus.not_needed
+        day.status = MealDayStatus.open if choice_map[day.date] else MealDayStatus.not_needed
         if payload.delivery_deadline:
             day.delivery_deadline = payload.delivery_deadline
 
@@ -218,6 +224,7 @@ def submit_intake_form(
         mother_name=train.mother_name,
         contact_phone=train.intake_form.contact_phone if train.intake_form else train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         status=train.status.value,
         public_token=train.public_token,
         start_date=train.start_date,
@@ -235,6 +242,7 @@ def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> P
         family_title=train.family_title,
         mother_name=train.mother_name,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         start_date=train.start_date,
         default_delivery_time=intake.delivery_deadline if intake and intake.delivery_deadline else train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -325,6 +333,7 @@ def create_birth_notice(
         family_title=_normalize_family_title(payload.family_name),
         mother_name=payload.mother_name,
         baby_type=baby_type,
+        is_twins=payload.is_twins,
         start_date=payload.start_date,
         default_delivery_time=DEFAULT_DELIVERY_TIME,
         reminder_time=DEFAULT_REMINDER_TIME,
@@ -332,7 +341,7 @@ def create_birth_notice(
         public_token=generate_token(8),
         status=MealTrainStatus.draft,
     )
-    train.days = build_default_days(payload.start_date, DEFAULT_DELIVERY_TIME)
+    train.days = build_default_days(payload.start_date, DEFAULT_DELIVERY_TIME, payload.is_twins)
     db.add(train)
     db.commit()
     db.refresh(train)

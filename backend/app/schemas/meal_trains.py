@@ -54,6 +54,7 @@ class MealTrainSummary(BaseModel):
     mother_name: str | None
     contact_phone: str | None
     baby_type: str | None
+    is_twins: bool
     status: str
     start_date: date
     default_delivery_time: str
@@ -81,6 +82,7 @@ class MealTrainDetail(BaseModel):
     mother_name: str | None
     contact_phone: str | None
     baby_type: str | None
+    is_twins: bool
     status: str
     start_date: date
     default_delivery_time: str
@@ -102,6 +104,7 @@ class MealTrainCreate(BaseModel):
     mother_name: str | None = None
     contact_phone: str | None = None
     baby_type: str | None = None
+    is_twins: bool = False
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -112,6 +115,7 @@ class MealTrainUpdate(BaseModel):
     mother_name: str | None = None
     contact_phone: str | None = None
     baby_type: str | None = None
+    is_twins: bool | None = None
     default_delivery_time: str | None = None
     reminder_time: str | None = None
     gift_delivered: bool | None = None
@@ -133,13 +137,15 @@ class MealDayUpdate(BaseModel):
 
 
 class IntakeDayChoice(BaseModel):
-    day_id: int
+    day_id: int | None = None
+    date: date
     needed: bool
 
 
 class IntakeSubmission(BaseModel):
     mother_name: str | None = None
     baby_type: str | None = None
+    is_twins: bool = False
     address: str
     household_size: str | None = None
     children_ages: str | None = None
@@ -158,6 +164,7 @@ class PublicIntakeResponse(BaseModel):
     mother_name: str | None
     contact_phone: str | None
     baby_type: str | None
+    is_twins: bool
     status: str
     public_token: str
     start_date: date
@@ -169,6 +176,7 @@ class PublicIntakeResponse(BaseModel):
 class PublicMealTrainSuggestion(BaseModel):
     family_title: str
     baby_type: str | None
+    is_twins: bool
     public_token: str
     open_days: int
     next_open_date: date | None
@@ -177,6 +185,7 @@ class PublicMealTrainSuggestion(BaseModel):
 class PublicLobbyTrainResponse(BaseModel):
     family_title: str
     baby_type: str | None
+    is_twins: bool
     public_token: str
     start_date: date
     end_date: date | None
@@ -204,6 +213,7 @@ class PublicMealTrainResponse(BaseModel):
     family_title: str
     mother_name: str | None
     baby_type: str | None
+    is_twins: bool
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -274,6 +284,7 @@ class PublicBirthNoticeCreate(BaseModel):
     family_name: str
     mother_name: str | None = None
     baby_type: str
+    is_twins: bool = False
     start_date: date
 
 

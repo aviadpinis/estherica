@@ -27,6 +27,7 @@ const createTrainSchema = z.object({
   mother_name: z.string().optional(),
   contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
+  is_twins: z.boolean(),
   start_date: z.string().min(1, "צריך תאריך התחלה"),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
@@ -37,6 +38,7 @@ const editTrainSchema = z.object({
   mother_name: z.string().optional(),
   contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
+  is_twins: z.boolean(),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
   lobby_visible: z.boolean().optional(),
@@ -139,7 +141,7 @@ function buildIntakeShareMessage(train: MealTrainDetail) {
 }
 
 function buildSignupShareMessage(train: MealTrainDetail) {
-  const babyCopy = getBabyCopy(train.baby_type)
+  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:\n${buildPublicLink(train.public_token)}`
 }
 
@@ -481,6 +483,7 @@ export function AdminDashboardPage() {
       mother_name: "",
       contact_phone: "",
       baby_type: "",
+      is_twins: false,
       start_date: new Date().toISOString().slice(0, 10),
       default_delivery_time: "18:00",
       reminder_time: "09:00",
@@ -494,6 +497,7 @@ export function AdminDashboardPage() {
       mother_name: "",
       contact_phone: "",
       baby_type: "",
+      is_twins: false,
       default_delivery_time: "18:00",
       reminder_time: "09:00",
     },
@@ -601,6 +605,7 @@ export function AdminDashboardPage() {
       mother_name: train.mother_name ?? "",
       contact_phone: train.contact_phone ?? "",
       baby_type: train.baby_type ?? "",
+      is_twins: train.is_twins,
       default_delivery_time: train.default_delivery_time,
       reminder_time: train.reminder_time,
     })
@@ -647,6 +652,7 @@ export function AdminDashboardPage() {
         mother_name: "",
         contact_phone: "",
         baby_type: "",
+        is_twins: false,
         start_date: new Date().toISOString().slice(0, 10),
         default_delivery_time: "18:00",
         reminder_time: "09:00",
@@ -854,7 +860,7 @@ export function AdminDashboardPage() {
   const selectedDay = selectedTrain?.days.find((day) => day.id === selectedDayId) ?? null
   const selectedDraft = selectedDay ? dayDrafts[selectedDay.id] : null
   const selectedTrainSummary = trainsQuery.data?.find((train) => train.id === selectedTrainId) ?? null
-  const babyCopy = getBabyCopy(selectedTrain?.baby_type)
+  const babyCopy = getBabyCopy(selectedTrain?.baby_type, selectedTrain?.is_twins)
   const activeTrains = sortTrainSummaries(trainsQuery.data?.filter((train) => !train.is_archived) ?? [])
   const archivedTrains = trainsQuery.data?.filter((train) => train.is_archived) ?? []
   const totalTrackedDays = activeTrains.reduce((total, train) => total + train.total_days, 0)
@@ -910,6 +916,7 @@ export function AdminDashboardPage() {
                 mother_name: selectedTrain.mother_name ?? "",
                 contact_phone: selectedTrain.contact_phone ?? "",
                 baby_type: selectedTrain.baby_type ?? "",
+                is_twins: selectedTrain.is_twins,
                 default_delivery_time: selectedTrain.default_delivery_time,
                 reminder_time: selectedTrain.reminder_time,
                 lobby_visible: !selectedTrain.lobby_visible,
@@ -995,7 +1002,7 @@ export function AdminDashboardPage() {
                         />
                       </div>
                       <p>
-                        {train.mother_name || "ממתין לשם יולדת"} · {getBabyCopy(train.baby_type).shortBlessing}
+                        {train.mother_name || "ממתין לשם יולדת"} · {getBabyCopy(train.baby_type, train.is_twins).shortBlessing}
                       </p>
                       <small>
                         {train.intake_submitted ? "השאלון מולא" : "ממתין לשאלון"} · {getRiskCopy(train)}
@@ -1040,7 +1047,7 @@ export function AdminDashboardPage() {
                           />
                         </div>
                         <p>
-                          {train.mother_name || "ללא שם"} · {getBabyCopy(train.baby_type).shortBlessing}
+                          {train.mother_name || "ללא שם"} · {getBabyCopy(train.baby_type, train.is_twins).shortBlessing}
                         </p>
                         <small>{train.end_date ? `הסתיים ב-${formatDatePair(train.end_date).short}` : "הסתיים"}</small>
                       </button>
@@ -1182,7 +1189,7 @@ export function AdminDashboardPage() {
                             <strong>שם:</strong> {selectedTrain.mother_name || "לא נרשם"}
                           </p>
                           <p>
-                            <strong>מה נולד:</strong> {getBabyCopy(selectedTrain.baby_type).label}
+                            <strong>מה נולד:</strong> {getBabyCopy(selectedTrain.baby_type, selectedTrain.is_twins).label}
                           </p>
                           <p>
                             <strong>כתובת:</strong> {selectedTrain.intake_form.address}
@@ -1341,6 +1348,12 @@ export function AdminDashboardPage() {
                           </select>
                         </label>
                       </div>
+
+                      <label className="checkbox-field">
+                        <input type="checkbox" {...editForm.register("is_twins")} />
+                        <span>מדובר בתאומים / תאומות</span>
+                        <small>המערכת תפתח אוטומטית לוח ל־3 שבועות.</small>
+                      </label>
 
                       <div className="field-row field-row--tight">
                         <label className="field">
@@ -1545,6 +1558,12 @@ export function AdminDashboardPage() {
                   </select>
                 </label>
               </div>
+
+              <label className="checkbox-field">
+                <input type="checkbox" {...createForm.register("is_twins")} />
+                <span>מדובר בתאומים / תאומות</span>
+                <small>במקרה כזה ייפתח אוטומטית לוח ל־3 שבועות.</small>
+              </label>
 
               <label className="field">
                 <span>תאריך התחלה</span>

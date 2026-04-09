@@ -12,11 +12,14 @@ import { getBabyCopy } from "../lib/baby"
 import type { MealDay, PublicIntakeData } from "../lib/types"
 
 type IntakeTab = "details" | "calendar"
+const TWO_WEEKS_DAYS = 14
+const THREE_WEEKS_DAYS = 21
 
 const intakeSchema = z.object({
   baby_type: z.enum(["boy", "girl"], {
     error: "צריך לבחור מה נולד",
   }),
+  is_twins: z.boolean(),
   mother_name: z.string().optional(),
   address: z.string().min(2, "כתובת חובה"),
   household_size: z.string().optional(),
@@ -30,13 +33,70 @@ const intakeSchema = z.object({
   general_notes: z.string().optional(),
   day_choices: z.array(
     z.object({
-      day_id: z.number(),
+      day_id: z.number().optional(),
+      date: z.string().min(1),
       needed: z.boolean(),
     }),
   ),
 })
 
 type IntakeValues = z.infer<typeof intakeSchema>
+
+function parseIsoDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function formatIsoDate(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function buildEditableDays(
+  startDate: string,
+  baseDays: MealDay[],
+  deliveryDeadline: string,
+  isTwins: boolean,
+) {
+  const baseDayMap = new Map(baseDays.map((day) => [day.date, day]))
+  const visibleDays: MealDay[] = []
+  const totalDays = isTwins ? THREE_WEEKS_DAYS : TWO_WEEKS_DAYS
+
+  for (let offset = 0; offset < totalDays; offset += 1) {
+    const current = parseIsoDate(startDate)
+    current.setDate(current.getDate() + offset)
+    if (current.getDay() === 5 || current.getDay() === 6) {
+      continue
+    }
+
+    const iso = formatIsoDate(current)
+    const existingDay = baseDayMap.get(iso)
+    if (existingDay) {
+      visibleDays.push(existingDay)
+      continue
+    }
+
+    visibleDays.push({
+      id: -(offset + 1),
+      date: iso,
+      status: "open",
+      is_default: true,
+      delivery_deadline: deliveryDeadline,
+      display_order: visibleDays.length + 1,
+      admin_note: null,
+      signup: null,
+    })
+  }
+
+  const includedDates = new Set(visibleDays.map((day) => day.date))
+  const extraExistingDays = baseDays.filter(
+    (day) => !includedDates.has(day.date) && (!day.is_default || day.signup != null || day.status === "assigned"),
+  )
+
+  return [...visibleDays, ...extraExistingDays].sort((left, right) => left.date.localeCompare(right.date))
+}
 
 export function MotherIntakePage() {
   const { token = "" } = useParams()
@@ -62,6 +122,7 @@ export function MotherIntakePage() {
     resolver: zodResolver(intakeSchema),
     defaultValues: {
       baby_type: undefined,
+      is_twins: false,
       mother_name: "",
       address: "",
       household_size: "",
@@ -84,6 +145,7 @@ export function MotherIntakePage() {
 
     reset({
       baby_type: intakeQuery.data.baby_type ?? undefined,
+      is_twins: intakeQuery.data.is_twins ?? false,
       mother_name: intakeQuery.data.mother_name ?? "",
       address: "",
       household_size: "",
@@ -97,6 +159,7 @@ export function MotherIntakePage() {
       general_notes: "",
       day_choices: intakeQuery.data.days.map((day) => ({
         day_id: day.id,
+        date: day.date,
         needed: day.status !== "not_needed",
       })),
     })
@@ -115,13 +178,44 @@ export function MotherIntakePage() {
   })
 
   const babyType = watch("baby_type")
-  const babyCopy = getBabyCopy(babyType)
+  const isTwins = watch("is_twins")
+  const babyCopy = getBabyCopy(babyType, isTwins)
   const dayChoices = watch("day_choices") ?? []
-  const selectionMap = Object.fromEntries(dayChoices.map((choice) => [choice.day_id, choice.needed]))
+  const displayDays = intakeQuery.data
+    ? buildEditableDays(
+        intakeQuery.data.start_date,
+        intakeQuery.data.days,
+        watch("delivery_deadline") || intakeQuery.data.default_delivery_time,
+        isTwins,
+      )
+    : []
+
+  useEffect(() => {
+    if (!displayDays.length) {
+      return
+    }
+
+    const currentChoices = getValues("day_choices")
+    const currentChoiceMap = new Map(currentChoices.map((choice) => [choice.date, choice]))
+    const nextChoices = displayDays.map((day) => ({
+      day_id: day.id > 0 ? day.id : undefined,
+      date: day.date,
+      needed: currentChoiceMap.get(day.date)?.needed ?? day.status !== "not_needed",
+    }))
+
+    const currentSignature = JSON.stringify(currentChoices.map(({ date, needed }) => ({ date, needed })))
+    const nextSignature = JSON.stringify(nextChoices.map(({ date, needed }) => ({ date, needed })))
+    if (currentSignature !== nextSignature) {
+      setValue("day_choices", nextChoices, { shouldValidate: true })
+    }
+  }, [displayDays, getValues, setValue])
+
+  const selectionByDate = Object.fromEntries(dayChoices.map((choice) => [choice.date, choice.needed]))
+  const selectionMap = Object.fromEntries(displayDays.map((day) => [day.id, selectionByDate[day.date] ?? true]))
 
   function toggleNeeded(day: MealDay) {
     const nextChoices = getValues("day_choices").map((choice) =>
-      choice.day_id === day.id ? { ...choice, needed: !choice.needed } : choice,
+      choice.date === day.date ? { ...choice, needed: !choice.needed } : choice,
     )
     setValue("day_choices", nextChoices, { shouldDirty: true, shouldValidate: true })
   }
@@ -129,7 +223,7 @@ export function MotherIntakePage() {
   return (
     <PageShell
       title="טופס יולדת"
-      subtitle="מלאי את הפרטים, סמני באילו ימים צריך ארוחה, ואנחנו נעביר את הלוח למבשלות."
+      subtitle="מלאי את הפרטים, סמני באילו ימים צריך ארוחה, ובמקרה של תאומים נפתח אוטומטית לוח ל־3 שבועות."
       tone={babyType}
     >
       <section className="panel panel--form">
@@ -199,6 +293,12 @@ export function MotherIntakePage() {
                   </div>
                   {errors.baby_type ? <small>{errors.baby_type.message}</small> : null}
                 </fieldset>
+
+                <label className="checkbox-field">
+                  <input type="checkbox" {...register("is_twins")} />
+                  <span>מדובר בתאומים / תאומות</span>
+                  <small>כשמסמנים כאן, המערכת פותחת אוטומטית לוח ל־3 שבועות.</small>
+                </label>
 
                 <label className="field">
                   <span>שם היולדת</span>
@@ -276,12 +376,12 @@ export function MotherIntakePage() {
                     </div>
                   </div>
 
-                  <MealCalendar
-                    startDate={intakeQuery.data.start_date}
-                    days={intakeQuery.data.days}
-                    babyType={babyType}
-                    mode="intake"
-                    selectionMap={selectionMap}
+                <MealCalendar
+                  startDate={intakeQuery.data.start_date}
+                  days={displayDays}
+                  babyType={babyType}
+                  mode="intake"
+                  selectionMap={selectionMap}
                     onToggleNeeded={toggleNeeded}
                   />
                 </section>

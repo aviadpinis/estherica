@@ -35,6 +35,9 @@ def ensure_schema() -> None:
         if "contact_phone" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE meal_trains ADD COLUMN contact_phone TEXT"))
+        if "is_twins" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE meal_trains ADD COLUMN is_twins BOOLEAN DEFAULT FALSE NOT NULL"))
 
     if "signups" in inspector.get_table_names():
         columns = {column["name"] for column in inspector.get_columns("signups")}

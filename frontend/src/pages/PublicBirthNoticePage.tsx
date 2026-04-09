@@ -15,6 +15,7 @@ const birthNoticeSchema = z.object({
   baby_type: z.enum(["boy", "girl"], {
     error: "צריך לבחור מה נולד",
   }),
+  is_twins: z.boolean(),
   start_date: z.string().min(1, "צריך תאריך התחלה"),
 })
 
@@ -28,6 +29,7 @@ export function PublicBirthNoticePage() {
       family_name: "",
       mother_name: "",
       baby_type: undefined,
+      is_twins: false,
       start_date: getLocalTodayIso(),
     },
   })
@@ -91,6 +93,12 @@ export function PublicBirthNoticePage() {
             </div>
             {form.formState.errors.baby_type ? <small>{form.formState.errors.baby_type.message}</small> : null}
           </fieldset>
+
+          <label className="checkbox-field">
+            <input type="checkbox" {...form.register("is_twins")} />
+            <span>מדובר בתאומים / תאומות</span>
+            <small>במקרה כזה המערכת תפתח אוטומטית לוח ל־3 שבועות.</small>
+          </label>
 
           <label className="field">
             <span>ממתי לפתוח את הלוח</span>

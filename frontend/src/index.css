@@ -318,6 +318,33 @@ img {
   gap: 8px;
 }
 
+.checkbox-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 4px;
+  align-items: start;
+  padding: 14px 16px;
+  border: 1px solid rgba(23, 18, 15, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.checkbox-field > input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+}
+
+.checkbox-field > span {
+  font-weight: 700;
+}
+
+.checkbox-field > small {
+  color: var(--muted);
+  grid-column: 2;
+}
+
 .field-row {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

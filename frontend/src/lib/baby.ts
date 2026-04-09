@@ -12,7 +12,31 @@ export function getBabyTone(babyType: BabyType | null | undefined) {
   return "neutral"
 }
 
-export function getBabyCopy(babyType: BabyType | null | undefined) {
+export function getBabyCopy(babyType: BabyType | null | undefined, isTwins = false) {
+  if (isTwins) {
+    if (babyType === "boy") {
+      return {
+        label: "תאומים",
+        blessing: "להולדת התאומים",
+        shortBlessing: "התאומים",
+      }
+    }
+
+    if (babyType === "girl") {
+      return {
+        label: "תאומות",
+        blessing: "להולדת התאומות",
+        shortBlessing: "התאומות",
+      }
+    }
+
+    return {
+      label: "תאומים",
+      blessing: "להולדת התאומים/ות",
+      shortBlessing: "התאומים/ות",
+    }
+  }
+
   if (babyType === "boy") {
     return {
       label: "בן",

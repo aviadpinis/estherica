@@ -113,7 +113,7 @@ export function PublicLobbyPage() {
             <div className="lobby-carousel">
               <div className="lobby-carousel__track">
                 {trains.map((train) => {
-                  const babyCopy = getBabyCopy(train.baby_type)
+                  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
                   const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
                   const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
                   const isOpen = train.open_days > 0

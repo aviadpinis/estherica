@@ -142,7 +142,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
       signupBelongsToVolunteer(day, volunteerProfile.volunteerKey, volunteerProfile.phone) &&
       day.date >= getLocalTodayIso(),
     ) ?? []
-  const babyCopy = getBabyCopy(trainQuery.data?.baby_type)
+  const babyCopy = getBabyCopy(trainQuery.data?.baby_type, trainQuery.data?.is_twins)
   const pageTitle = trainQuery.data ? `מפנקות את ${trainQuery.data.family_title}` : "השתבצות לארוחות"
   const pageSubtitle = `מזל טוב ${babyCopy.blessing}`
   const hasOpenDays =
@@ -387,7 +387,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
               >
                 <div className="related-train-card__content">
                   <p className="eyebrow">מפנקות את {relatedTrain.family_title}</p>
-                  <h4>מזל טוב {getBabyCopy(relatedTrain.baby_type).blessing}</h4>
+                  <h4>מזל טוב {getBabyCopy(relatedTrain.baby_type, relatedTrain.is_twins).blessing}</h4>
                   <p className="muted">
                     {relatedTrain.open_days} ימים פנויים
                     {relatedTrain.next_open_date

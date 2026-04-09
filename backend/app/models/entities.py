@@ -58,6 +58,7 @@ class MealTrain(Base):
     mother_name: Mapped[str | None] = mapped_column(EncryptedValue(), nullable=True)
     contact_phone: Mapped[str | None] = mapped_column(EncryptedValue(), nullable=True)
     baby_type: Mapped[BabyType | None] = mapped_column(Enum(BabyType), nullable=True)
+    is_twins: Mapped[bool] = mapped_column(default=False, nullable=False)
     status: Mapped[MealTrainStatus] = mapped_column(
         Enum(MealTrainStatus),
         default=MealTrainStatus.draft,

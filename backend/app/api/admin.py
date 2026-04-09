@@ -21,7 +21,7 @@ from app.schemas.meal_trains import (
     MealTrainSummary,
     MealTrainUpdate,
 )
-from app.services.meal_trains import build_default_days, generate_token
+from app.services.meal_trains import build_default_days, generate_token, sync_default_days
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -51,7 +51,8 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
 
     end_date = max((day.date for day in train.days), default=None)
     is_archived = end_date is not None and end_date < today
-    completion_rate = (assigned_days / len(train.days) * 100) if train.days else 0
+    resolved_days = max(0, len(train.days) - open_days)
+    completion_rate = (resolved_days / len(train.days) * 100) if train.days else 0
     if is_archived:
         risk_level = "archived"
     elif urgent_open_days > 0:
@@ -67,6 +68,7 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
         mother_name=train.mother_name,
         contact_phone=train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         status=train.status.value,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
@@ -96,6 +98,7 @@ def _build_detail(train: MealTrain) -> MealTrainDetail:
         mother_name=train.mother_name,
         contact_phone=train.contact_phone,
         baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
         status=train.status.value,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
@@ -263,13 +266,14 @@ def create_meal_train(
         mother_name=payload.mother_name,
         contact_phone=payload.contact_phone,
         baby_type=BabyType(payload.baby_type) if payload.baby_type else None,
+        is_twins=payload.is_twins,
         start_date=payload.start_date,
         default_delivery_time=payload.default_delivery_time,
         reminder_time=payload.reminder_time,
         intake_token=generate_token(12),
         public_token=generate_token(8),
     )
-    train.days = build_default_days(payload.start_date, payload.default_delivery_time)
+    train.days = build_default_days(payload.start_date, payload.default_delivery_time, payload.is_twins)
     db.add(train)
     db.commit()
     db.refresh(train)
@@ -304,12 +308,18 @@ def update_meal_train(
     if "baby_type" in updates:
         train.baby_type = BabyType(updates["baby_type"]) if updates["baby_type"] else None
 
+    if "is_twins" in updates:
+        train.is_twins = updates["is_twins"]
+
     for field in ("family_title", "mother_name", "contact_phone", "default_delivery_time", "reminder_time", "gift_delivered"):
         if field in updates:
             setattr(train, field, updates[field])
 
     if "lobby_visible" in updates:
         train.lobby_visible = updates["lobby_visible"]
+
+    if any(field in updates for field in ("is_twins", "default_delivery_time")):
+        sync_default_days(train, train.default_delivery_time)
 
     db.commit()
     return _build_detail(_get_train_or_404(db, train_id))

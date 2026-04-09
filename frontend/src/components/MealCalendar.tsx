@@ -37,8 +37,15 @@ function buildCells(startDate: string, days: MealDay[]) {
   const dayMap = new Map(days.map((day) => [day.date, day]))
   const start = parseIsoDate(startDate)
   const cells: CalendarCell[] = []
+  const maxOffset = Math.max(
+    13,
+    ...days.map((day) => {
+      const current = parseIsoDate(day.date)
+      return Math.round((current.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    }),
+  )
 
-  for (let offset = 0; offset < 14; offset += 1) {
+  for (let offset = 0; offset <= maxOffset; offset += 1) {
     const current = new Date(start)
     current.setDate(start.getDate() + offset)
     const iso = formatIsoDate(current)
@@ -51,7 +58,7 @@ function buildCells(startDate: string, days: MealDay[]) {
   }
 
   return {
-    rows: [cells.slice(0, 7), cells.slice(7, 14)],
+    rows: Array.from({ length: Math.ceil(cells.length / 7) }, (_, index) => cells.slice(index * 7, (index + 1) * 7)),
     extraDays: days.filter((day) => !cells.some((cell) => cell.iso === day.date)),
   }
 }
