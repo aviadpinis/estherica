@@ -548,6 +548,27 @@ export function AdminDashboardPage() {
     },
   })
 
+  const deleteTrainMutation = useMutation({
+    mutationFn: (trainId: number) =>
+      apiRequest<void>(
+        `/api/admin/meal-trains/${trainId}`,
+        {
+          method: "DELETE",
+        },
+        token,
+      ),
+    onSuccess: (_, trainId) => {
+      setFeedback("היולדת נמחקה.")
+      queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
+      queryClient.removeQueries({ queryKey: ["meal-train", trainId] })
+      if (selectedTrainId === trainId) {
+        setSelectedTrainId(null)
+        setSelectedDayId(null)
+      }
+    },
+  })
+
   const createAdminMutation = useMutation({
     mutationFn: (values: CreateAdminValues) =>
       apiRequest<AdminAccount>(
@@ -637,6 +658,7 @@ export function AdminDashboardPage() {
     (addDayMutation.error as ApiError | null)?.message ||
     (updateDayMutation.error as ApiError | null)?.message ||
     (updateGiftMutation.error as ApiError | null)?.message ||
+    (deleteTrainMutation.error as ApiError | null)?.message ||
     (trainsQuery.error as ApiError | null)?.message ||
     (selectedTrainQuery.error as ApiError | null)?.message ||
     (adminsQuery.error as ApiError | null)?.message ||
@@ -681,48 +703,53 @@ export function AdminDashboardPage() {
       </section>
 
       {activeTab === "cases" ? (
-        <section className="admin-tab-layout">
-          <aside className="panel case-list-panel">
+        <section className="admin-cases-layout">
+          <section className="panel case-carousel-panel">
             <div className="section-heading">
               <div>
                 <p className="eyebrow">יולדות פעילות</p>
-                <h4>בחירת יולדת</h4>
+                <h4>בחירת יולדת בגרירה</h4>
               </div>
               <span className="muted">{activeTrains.length} פעילות</span>
             </div>
 
-            <div className="case-list-scroll">
-              {trainsQuery.isLoading ? <p className="muted">טוען מקרים...</p> : null}
-              {!activeTrains.length && !trainsQuery.isLoading ? <p className="muted">אין כרגע מקרים פעילים.</p> : null}
-              {activeTrains.map((train) => (
-                <button
-                  key={train.id}
-                  className={`train-card ${selectedTrainId === train.id ? "train-card--active" : ""}`}
-                  onClick={() => openTrain(train.id)}
-                  type="button"
-                >
-                  <div className="train-card__top">
-                    <div className="train-card__summary">
-                      <strong>{train.family_title}</strong>
-                      <span className={`status status--${train.status}`}>{getTrainStatusLabel(train.status)}</span>
-                    </div>
-                    <ProgressDonut
-                      assignedDays={train.assigned_days}
-                      totalDays={train.total_days}
-                      compact
-                      tone={getTrainTone(train)}
-                    />
-                  </div>
-                  <p>
-                    {train.mother_name || "ממתין לשם יולדת"} · {getBabyCopy(train.baby_type).shortBlessing}
-                  </p>
-                  <small>
-                    {train.intake_submitted ? "השאלון מולא" : "ממתין לשאלון"} · {getRiskCopy(train)}
-                    {!train.lobby_visible ? " · מוסתרת מהלובי" : ""}
-                  </small>
-                </button>
-              ))}
-            </div>
+            {trainsQuery.isLoading ? <p className="muted">טוען מקרים...</p> : null}
+            {!activeTrains.length && !trainsQuery.isLoading ? <p className="muted">אין כרגע מקרים פעילים.</p> : null}
+
+            {activeTrains.length ? (
+              <div className="lobby-carousel train-carousel">
+                <div className="lobby-carousel__track">
+                  {activeTrains.map((train) => (
+                    <button
+                      key={train.id}
+                      className={`train-card train-card--carousel ${selectedTrainId === train.id ? "train-card--active" : ""}`}
+                      onClick={() => openTrain(train.id)}
+                      type="button"
+                    >
+                      <div className="train-card__top">
+                        <div className="train-card__summary">
+                          <strong>{train.family_title}</strong>
+                          <span className={`status status--${train.status}`}>{getTrainStatusLabel(train.status)}</span>
+                        </div>
+                        <ProgressDonut
+                          assignedDays={train.assigned_days}
+                          totalDays={train.total_days}
+                          compact
+                          tone={getTrainTone(train)}
+                        />
+                      </div>
+                      <p>
+                        {train.mother_name || "ממתין לשם יולדת"} · {getBabyCopy(train.baby_type).shortBlessing}
+                      </p>
+                      <small>
+                        {train.intake_submitted ? "השאלון מולא" : "ממתין לשאלון"} · {getRiskCopy(train)}
+                        {!train.lobby_visible ? " · מוסתרת מהלובי" : ""}
+                      </small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {archivedTrains.length ? (
               <>
@@ -730,36 +757,38 @@ export function AdminDashboardPage() {
                 <div className="section-heading">
                   <div>
                     <p className="eyebrow">ארכיון</p>
-                    <h4>מקרים שהסתיימו</h4>
+                    <h4>יולדות שהסתיימו</h4>
                   </div>
                   <span className="muted">{archivedTrains.length}</span>
                 </div>
 
-                <div className="case-list-scroll case-list-scroll--archive">
-                  {archivedTrains.map((train) => (
-                    <button
-                      key={train.id}
-                      className={`train-card ${selectedTrainId === train.id ? "train-card--active" : ""}`}
-                      onClick={() => openTrain(train.id)}
-                      type="button"
-                    >
-                      <div className="train-card__top">
-                        <div className="train-card__summary">
-                          <strong>{train.family_title}</strong>
-                          <span className="status status--completed">הסתיים</span>
+                <div className="lobby-carousel train-carousel train-carousel--archive">
+                  <div className="lobby-carousel__track">
+                    {archivedTrains.map((train) => (
+                      <button
+                        key={train.id}
+                        className={`train-card train-card--carousel ${selectedTrainId === train.id ? "train-card--active" : ""}`}
+                        onClick={() => openTrain(train.id)}
+                        type="button"
+                      >
+                        <div className="train-card__top">
+                          <div className="train-card__summary">
+                            <strong>{train.family_title}</strong>
+                            <span className="status status--completed">הסתיים</span>
+                          </div>
+                          <ProgressDonut assignedDays={train.assigned_days} totalDays={train.total_days} compact tone="neutral" />
                         </div>
-                        <ProgressDonut assignedDays={train.assigned_days} totalDays={train.total_days} compact tone="neutral" />
-                      </div>
-                      <p>
-                        {train.mother_name || "ללא שם"} · {getBabyCopy(train.baby_type).shortBlessing}
-                      </p>
-                      <small>{train.end_date ? `הסתיים ב-${formatDatePair(train.end_date).short}` : "הסתיים"}</small>
-                    </button>
-                  ))}
+                        <p>
+                          {train.mother_name || "ללא שם"} · {getBabyCopy(train.baby_type).shortBlessing}
+                        </p>
+                        <small>{train.end_date ? `הסתיים ב-${formatDatePair(train.end_date).short}` : "הסתיים"}</small>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </>
             ) : null}
-          </aside>
+          </section>
 
           <section className="panel admin-main">
             {selectedTrainQuery.isLoading ? <p className="muted">טוען את פרטי המקרה...</p> : null}
@@ -1018,6 +1047,33 @@ export function AdminDashboardPage() {
                             : selectedTrain.lobby_visible
                               ? "הסתרה מהלובי"
                               : "החזרה ללובי"}
+                        </button>
+                      </div>
+                    </article>
+
+                    <article className="info-card info-card--danger">
+                      <h4>מחיקת יולדת</h4>
+                      <div className="detail-list">
+                        <p>
+                          <strong>מתי להשתמש:</strong> רק אם נפתח מקרה כפול או אם זו יולדת שלא אמורה להישאר במערכת.
+                        </p>
+                        <p className="muted">המחיקה תסיר גם את הלוח, השאלון וההשתבצויות שלה.</p>
+                        <button
+                          className="button button--danger"
+                          type="button"
+                          disabled={deleteTrainMutation.isPending}
+                          onClick={() => {
+                            if (!selectedTrain) {
+                              return
+                            }
+                            const shouldDelete = window.confirm(`למחוק את ${selectedTrain.family_title}? אי אפשר לשחזר אחר כך.`)
+                            if (!shouldDelete) {
+                              return
+                            }
+                            deleteTrainMutation.mutate(selectedTrain.id)
+                          }}
+                        >
+                          {deleteTrainMutation.isPending ? "מוחקת..." : "מחיקת יולדת"}
                         </button>
                       </div>
                     </article>

@@ -328,6 +328,17 @@ def publish_meal_train(
     return _build_detail(_get_train_or_404(db, train_id))
 
 
+@router.delete("/meal-trains/{train_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_meal_train(
+    train_id: int,
+    _: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    train = _get_train_or_404(db, train_id)
+    db.delete(train)
+    db.commit()
+
+
 @router.post("/meal-trains/{train_id}/days", response_model=MealTrainDetail, status_code=status.HTTP_201_CREATED)
 def add_meal_day(
     train_id: int,

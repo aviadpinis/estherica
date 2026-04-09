@@ -291,6 +291,12 @@ img {
   border: 1px solid var(--stroke);
 }
 
+.button--danger {
+  background: rgba(141, 66, 55, 0.14);
+  color: var(--danger);
+  border: 1px solid rgba(141, 66, 55, 0.2);
+}
+
 .field,
 .field-row {
   display: grid;
@@ -392,6 +398,11 @@ img {
   grid-template-columns: 320px 1fr;
   gap: 18px;
   align-items: start;
+}
+
+.admin-cases-layout {
+  display: grid;
+  gap: 18px;
 }
 
 .admin-layout {
@@ -623,6 +634,11 @@ img {
   border: 1px solid var(--stroke);
   border-radius: 24px;
   padding: 20px;
+}
+
+.info-card--danger {
+  border-color: rgba(141, 66, 55, 0.24);
+  background: rgba(141, 66, 55, 0.06);
 }
 
 .link-preview {
@@ -1166,6 +1182,25 @@ button.calendar-card {
 
 .lobby-card--neutral {
   background: linear-gradient(180deg, rgba(249, 240, 232, 0.95), rgba(238, 225, 208, 0.92));
+}
+
+.lobby-card--assignment {
+  border-style: dashed;
+}
+
+.train-carousel .train-card--carousel {
+  flex: 0 0 min(320px, calc(100vw - 72px));
+  min-height: 174px;
+  scroll-snap-align: start;
+}
+
+.train-carousel .lobby-carousel__track {
+  width: max-content;
+}
+
+.case-carousel-panel {
+  display: grid;
+  gap: 18px;
 }
 
 .empty-state {

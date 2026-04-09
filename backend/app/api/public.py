@@ -2,6 +2,7 @@ from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import get_settings
@@ -16,6 +17,8 @@ from app.schemas.meal_trains import (
     PublicLobbyTrainResponse,
     PublicMealTrainResponse,
     PublicMealTrainSuggestion,
+    PublicVolunteerSignupResponse,
+    PublicVolunteerSignupsLookup,
     SignupCancelRequest,
     SignupCreate,
     SignupResponse,
@@ -262,6 +265,50 @@ def get_public_lobby(db: Session = Depends(get_db)) -> list[PublicLobbyTrainResp
         )
     )
     return lobby_trains
+
+
+@router.post("/volunteer-signups", response_model=list[PublicVolunteerSignupResponse])
+def get_volunteer_signups(
+    payload: PublicVolunteerSignupsLookup,
+    db: Session = Depends(get_db),
+) -> list[PublicVolunteerSignupResponse]:
+    if not payload.volunteer_key and not payload.phone:
+        return []
+
+    today = _today_in_project_timezone()
+    query = (
+        db.query(Signup)
+        .join(Signup.meal_day)
+        .join(MealDay.meal_train)
+        .options(
+            joinedload(Signup.meal_day).joinedload(MealDay.meal_train).joinedload(MealTrain.intake_form),
+        )
+        .filter(
+            MealDay.date >= today,
+            MealTrain.status == MealTrainStatus.published,
+        )
+    )
+
+    if payload.volunteer_key and payload.phone:
+        query = query.filter(or_(Signup.volunteer_key == payload.volunteer_key, Signup.phone == payload.phone))
+    elif payload.volunteer_key:
+        query = query.filter(Signup.volunteer_key == payload.volunteer_key)
+    else:
+        query = query.filter(Signup.phone == payload.phone)
+
+    signups = query.order_by(MealDay.date.asc(), MealDay.delivery_deadline.asc()).all()
+
+    return [
+        PublicVolunteerSignupResponse(
+            family_title=signup.meal_day.meal_train.family_title,
+            baby_type=signup.meal_day.meal_train.baby_type.value if signup.meal_day.meal_train.baby_type else None,
+            public_token=signup.meal_day.meal_train.public_token,
+            date=signup.meal_day.date,
+            delivery_deadline=signup.meal_day.delivery_deadline,
+            address=signup.meal_day.meal_train.intake_form.address if signup.meal_day.meal_train.intake_form else None,
+        )
+        for signup in signups
+    ]
 
 
 @router.post("/birth-notices", response_model=PublicBirthNoticeCreateResponse, status_code=status.HTTP_201_CREATED)

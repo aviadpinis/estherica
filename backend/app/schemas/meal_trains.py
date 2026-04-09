@@ -186,6 +186,20 @@ class PublicLobbyTrainResponse(BaseModel):
     stage: str
 
 
+class PublicVolunteerSignupsLookup(BaseModel):
+    volunteer_key: str | None = None
+    phone: str | None = None
+
+
+class PublicVolunteerSignupResponse(BaseModel):
+    family_title: str
+    baby_type: str | None
+    public_token: str
+    date: date
+    delivery_deadline: str
+    address: str | None = None
+
+
 class PublicMealTrainResponse(BaseModel):
     family_title: str
     mother_name: str | None

@@ -136,6 +136,15 @@ export interface PublicLobbyTrain {
   stage: "needs_signups" | "ongoing"
 }
 
+export interface PublicVolunteerSignup {
+  family_title: string
+  baby_type: BabyType | null
+  public_token: string
+  date: string
+  delivery_deadline: string
+  address: string | null
+}
+
 export interface PublicBirthNoticeResponse {
   intake_token: string
   family_title: string
