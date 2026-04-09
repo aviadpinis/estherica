@@ -42,9 +42,9 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
     urgent_until = today.fromordinal(today.toordinal() + 3)
     urgent_open_days = 0
     for day in train.days:
-        if day.status == MealDayStatus.open:
+        if day.status == MealDayStatus.open and day.date >= today:
             open_days += 1
-            if today <= day.date <= urgent_until:
+            if day.date <= urgent_until:
                 urgent_open_days += 1
         if day.status == MealDayStatus.assigned:
             assigned_days += 1
@@ -72,6 +72,7 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
         gift_delivered=train.gift_delivered,
+        lobby_visible=train.lobby_visible,
         intake_token=train.intake_token,
         public_token=train.public_token,
         created_at=train.created_at,
@@ -100,6 +101,7 @@ def _build_detail(train: MealTrain) -> MealTrainDetail:
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
         gift_delivered=train.gift_delivered,
+        lobby_visible=train.lobby_visible,
         timezone=train.timezone,
         intake_token=train.intake_token,
         public_token=train.public_token,
@@ -305,6 +307,9 @@ def update_meal_train(
     for field in ("family_title", "mother_name", "contact_phone", "default_delivery_time", "reminder_time", "gift_delivered"):
         if field in updates:
             setattr(train, field, updates[field])
+
+    if "lobby_visible" in updates:
+        train.lobby_visible = updates["lobby_visible"]
 
     db.commit()
     return _build_detail(_get_train_or_404(db, train_id))

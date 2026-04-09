@@ -59,6 +59,7 @@ class MealTrainSummary(BaseModel):
     default_delivery_time: str
     reminder_time: str
     gift_delivered: bool
+    lobby_visible: bool
     intake_token: str
     public_token: str
     created_at: datetime
@@ -85,6 +86,7 @@ class MealTrainDetail(BaseModel):
     default_delivery_time: str
     reminder_time: str
     gift_delivered: bool
+    lobby_visible: bool
     timezone: str
     intake_token: str
     public_token: str
@@ -113,6 +115,7 @@ class MealTrainUpdate(BaseModel):
     default_delivery_time: str | None = None
     reminder_time: str | None = None
     gift_delivered: bool | None = None
+    lobby_visible: bool | None = None
     status: str | None = None
 
 

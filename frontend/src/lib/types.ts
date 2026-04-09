@@ -50,6 +50,7 @@ export interface MealTrainSummary {
   default_delivery_time: string
   reminder_time: string
   gift_delivered: boolean
+  lobby_visible: boolean
   intake_token: string
   public_token: string
   created_at: string
@@ -76,6 +77,7 @@ export interface MealTrainDetail {
   default_delivery_time: string
   reminder_time: string
   gift_delivered: boolean
+  lobby_visible: boolean
   timezone: string
   intake_token: string
   public_token: string

@@ -29,6 +29,9 @@ def ensure_schema() -> None:
         if "gift_delivered" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE meal_trains ADD COLUMN gift_delivered BOOLEAN DEFAULT 0 NOT NULL"))
+        if "lobby_visible" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE meal_trains ADD COLUMN lobby_visible BOOLEAN DEFAULT 1 NOT NULL"))
         if "contact_phone" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE meal_trains ADD COLUMN contact_phone TEXT"))

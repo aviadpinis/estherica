@@ -1010,7 +1010,17 @@ button.calendar-card {
   color: #071723;
 }
 
+.calendar-card--boy.calendar-card--completed {
+  background: linear-gradient(180deg, #8bb8e8, #5d8ec2);
+  color: #071723;
+}
+
 .calendar-card--girl.calendar-card--assigned {
+  background: linear-gradient(180deg, #e792b1, #c9658d);
+  color: #2b0f18;
+}
+
+.calendar-card--girl.calendar-card--completed {
   background: linear-gradient(180deg, #e792b1, #c9658d);
   color: #2b0f18;
 }
@@ -1019,9 +1029,16 @@ button.calendar-card {
   background: linear-gradient(180deg, #d5c2ab, #b2997b);
 }
 
+.calendar-card--neutral.calendar-card--completed {
+  background: linear-gradient(180deg, #d5c2ab, #b2997b);
+}
+
 .calendar-card--assigned .calendar-card__body p,
 .calendar-card--assigned .calendar-card__footer,
-.calendar-card--assigned .calendar-card__signup {
+.calendar-card--assigned .calendar-card__signup,
+.calendar-card--completed .calendar-card__body p,
+.calendar-card--completed .calendar-card__footer,
+.calendar-card--completed .calendar-card__signup {
   color: rgba(16, 15, 14, 0.82);
 }
 
@@ -1030,7 +1047,8 @@ button.calendar-card {
   background: linear-gradient(180deg, #f2ede7, #e7ddd1);
 }
 
-.calendar-card--weekend {
+.calendar-card--weekend,
+.calendar-card--past {
   background: repeating-linear-gradient(
     -45deg,
     rgba(23, 18, 15, 0.04),

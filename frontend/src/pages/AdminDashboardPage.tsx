@@ -39,6 +39,7 @@ const editTrainSchema = z.object({
   baby_type: babyTypeSchema,
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
+  lobby_visible: z.boolean().optional(),
 })
 
 const addDaySchema = z.object({
@@ -715,7 +716,10 @@ export function AdminDashboardPage() {
                   <p>
                     {train.mother_name || "ממתין לשם יולדת"} · {getBabyCopy(train.baby_type).shortBlessing}
                   </p>
-                  <small>{train.intake_submitted ? "השאלון מולא" : "ממתין לשאלון"} · {getRiskCopy(train)}</small>
+                  <small>
+                    {train.intake_submitted ? "השאלון מולא" : "ממתין לשאלון"} · {getRiskCopy(train)}
+                    {!train.lobby_visible ? " · מוסתרת מהלובי" : ""}
+                  </small>
                 </button>
               ))}
             </div>
@@ -789,6 +793,9 @@ export function AdminDashboardPage() {
                         >
                           {getRiskCopy(selectedTrainSummary)}
                         </span>
+                      ) : null}
+                      {!selectedTrain.lobby_visible ? (
+                        <span className="detail-badge detail-badge--neutral">מוסתרת מהלובי</span>
                       ) : null}
                       {selectedTrain.gift_delivered ? <span className="detail-badge detail-badge--success">השי נמסר</span> : null}
                     </div>
@@ -898,6 +905,9 @@ export function AdminDashboardPage() {
                               <strong>קישור השתבצות:</strong>
                             </p>
                             <code>{buildPublicLink(selectedTrain.public_token)}</code>
+                            <p>
+                              <strong>לובי ציבורי:</strong> {selectedTrain.lobby_visible ? "מופיעה בלובי" : "מוסתרת מהלובי"}
+                            </p>
                           </>
                         ) : (
                           <p className="muted">קישור ההשתבצות ייפתח אוטומטית מיד אחרי מילוי השאלון.</p>
@@ -976,6 +986,38 @@ export function AdminDashboardPage() {
                             : selectedTrain.gift_delivered
                               ? "ביטול סימון שי"
                               : "סימון שי נמסר"}
+                        </button>
+                      </div>
+                    </article>
+
+                    <article className="info-card">
+                      <h4>נראות ציבורית</h4>
+                      <div className="detail-list">
+                        <p>
+                          <strong>סטטוס בלובי:</strong> {selectedTrain.lobby_visible ? "מופיעה ביולדות הציבוריות" : "מוסתרת כרגע מהלובי"}
+                        </p>
+                        <p className="muted">
+                          הסתרה מהלובי לא שוברת קישורים שכבר נשלחו. היא רק מורידה את היולדת מרשימת הגילוי הציבורית.
+                        </p>
+                        <button
+                          className="button button--secondary"
+                          type="button"
+                          disabled={updateTrainMutation.isPending}
+                          onClick={() => updateTrainMutation.mutate({
+                            family_title: selectedTrain.family_title,
+                            mother_name: selectedTrain.mother_name ?? "",
+                            contact_phone: selectedTrain.contact_phone ?? "",
+                            baby_type: selectedTrain.baby_type ?? "",
+                            default_delivery_time: selectedTrain.default_delivery_time,
+                            reminder_time: selectedTrain.reminder_time,
+                            lobby_visible: !selectedTrain.lobby_visible,
+                          })}
+                        >
+                          {updateTrainMutation.isPending
+                            ? "שומרת..."
+                            : selectedTrain.lobby_visible
+                              ? "הסתרה מהלובי"
+                              : "החזרה ללובי"}
                         </button>
                       </div>
                     </article>

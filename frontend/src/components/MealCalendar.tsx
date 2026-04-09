@@ -1,4 +1,4 @@
-import { formatDatePair, formatWeekdayShort } from "../lib/date"
+import { formatDatePair, formatWeekdayShort, getLocalTodayIso } from "../lib/date"
 import { getBabyTone } from "../lib/baby"
 import type { BabyType, MealDay } from "../lib/types"
 
@@ -60,6 +60,7 @@ function getCellState(
   cell: CalendarCell,
   mode: CalendarMode,
   selectionMap: Record<number, boolean> | undefined,
+  todayIso: string,
 ) {
   if (cell.isWeekend) {
     return "weekend"
@@ -67,6 +68,10 @@ function getCellState(
 
   if (!cell.day) {
     return "missing"
+  }
+
+  if (cell.day.date < todayIso) {
+    return cell.day.status === "assigned" ? "completed" : "past"
   }
 
   if (mode === "intake") {
@@ -96,11 +101,12 @@ export function MealCalendar({
 }: MealCalendarProps) {
   const { rows, extraDays } = buildCells(startDate, days)
   const tone = getBabyTone(babyType)
+  const todayIso = getLocalTodayIso()
 
   function renderCell(cell: CalendarCell) {
     const labels = formatDatePair(cell.iso)
     const weekday = formatWeekdayShort(cell.iso)
-    const state = getCellState(cell, mode, selectionMap)
+    const state = getCellState(cell, mode, selectionMap, todayIso)
     const isSelected = selectedDayId != null && cell.day?.id === selectedDayId
     const className = [
       "calendar-card",
@@ -116,7 +122,7 @@ export function MealCalendar({
       cell.day &&
       !cell.isWeekend &&
       ((mode === "intake" && onToggleNeeded) ||
-        (mode === "public" && cell.day.status === "open" && onSelectDay) ||
+        (mode === "public" && state === "open" && onSelectDay) ||
         (mode === "admin" && onSelectDay))
 
     const body = (
@@ -132,12 +138,14 @@ export function MealCalendar({
         <div className="calendar-card__footer">
           {cell.isWeekend ? <span>שישי / שבת</span> : null}
           {!cell.isWeekend && !cell.day ? <span>לא פעיל</span> : null}
+          {state === "past" ? <span>לא רלוונטי</span> : null}
+          {state === "completed" ? <span>פינקנו</span> : null}
           {mode === "intake" && cell.day ? (
             <span>{selectionMap?.[cell.day.id] === false ? "לא צריך" : "צריך ארוחה"}</span>
           ) : null}
-          {mode !== "intake" && cell.day?.status === "open" ? <span>פנוי</span> : null}
-          {mode !== "intake" && cell.day?.status === "not_needed" ? <span>לא צריך</span> : null}
-          {cell.day?.status === "assigned" ? <span>תפוס</span> : null}
+          {mode !== "intake" && state === "open" ? <span>פנוי</span> : null}
+          {mode !== "intake" && state === "not-needed" ? <span>לא צריך</span> : null}
+          {state === "assigned" ? <span>תפוס</span> : null}
         </div>
         {volunteerName ? <div className="calendar-card__signup">{volunteerName}</div> : null}
       </>

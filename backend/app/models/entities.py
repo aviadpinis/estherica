@@ -68,6 +68,7 @@ class MealTrain(Base):
     default_delivery_time: Mapped[str] = mapped_column(String(5), nullable=False)
     reminder_time: Mapped[str] = mapped_column(String(5), nullable=False)
     gift_delivered: Mapped[bool] = mapped_column(default=False, nullable=False)
+    lobby_visible: Mapped[bool] = mapped_column(default=True, nullable=False)
     intake_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     public_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

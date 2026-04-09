@@ -81,7 +81,11 @@ def _build_related_trains(db: Session, current_train_id: int) -> list[PublicMeal
     trains = (
         db.query(MealTrain)
         .options(joinedload(MealTrain.days))
-        .filter(MealTrain.status == MealTrainStatus.published, MealTrain.id != current_train_id)
+        .filter(
+            MealTrain.status == MealTrainStatus.published,
+            MealTrain.lobby_visible.is_(True),
+            MealTrain.id != current_train_id,
+        )
         .order_by(MealTrain.published_at.desc(), MealTrain.created_at.desc())
         .all()
     )
@@ -245,7 +249,7 @@ def get_public_lobby(db: Session = Depends(get_db)) -> list[PublicLobbyTrainResp
     trains = (
         db.query(MealTrain)
         .options(joinedload(MealTrain.days))
-        .filter(MealTrain.status == MealTrainStatus.published)
+        .filter(MealTrain.status == MealTrainStatus.published, MealTrain.lobby_visible.is_(True))
         .order_by(MealTrain.published_at.desc(), MealTrain.created_at.desc())
         .all()
     )

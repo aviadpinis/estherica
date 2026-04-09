@@ -136,9 +136,11 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
   })
 
   const selectedDay = trainQuery.data?.days.find((day) => day.id === selectedDayId) ?? null
+  const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const ownSignups =
     trainQuery.data?.days.filter((day) =>
-      signupBelongsToVolunteer(day, volunteerProfile.volunteerKey, volunteerProfile.phone),
+      signupBelongsToVolunteer(day, volunteerProfile.volunteerKey, volunteerProfile.phone) &&
+      day.date >= getLocalTodayIso(),
     ) ?? []
   const babyCopy = getBabyCopy(trainQuery.data?.baby_type)
   const pageTitle = trainQuery.data ? `מפנקות את ${trainQuery.data.family_title}` : "השתבצות לארוחות"
@@ -301,63 +303,71 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
               </section>
             ) : null}
 
-            {selectedDay ? (
-              <section className="panel panel--nested">
-                <div className="section-heading">
-                  <div>
-                    <h4>השתבצות ליום הנבחר</h4>
-                    <p>
-                      {formatDatePair(selectedDay.date).hebrew} · הבאת ארוחה עד {selectedDay.delivery_deadline}
-                    </p>
-                  </div>
-                  <button
-                    className="button button--ghost"
-                    type="button"
-                    onClick={() => setSelectedDayId(null)}
-                  >
-                    סגירה
-                  </button>
-                </div>
-
-                <form className="form-grid" onSubmit={handleSubmit((values) => signupMutation.mutate(values))}>
-                  <div className="field-row">
-                    <label className="field">
-                      <span>שם מלא</span>
-                      <input {...register("volunteer_name")} />
-                      {errors.volunteer_name ? <small>{errors.volunteer_name.message}</small> : null}
-                    </label>
-                    <label className="field">
-                      <span>טלפון</span>
-                      <input {...register("phone")} />
-                    {errors.phone ? <small>{errors.phone.message}</small> : null}
-                  </label>
-                </div>
-                  <div className="field-row">
-                    <label className="field">
-                      <span>חלבי / בשרי</span>
-                      <input {...register("meal_type")} placeholder="אופציונלי" />
-                    </label>
-                    <label className="field">
-                      <span>הערה</span>
-                      <input {...register("note")} placeholder="אופציונלי" />
-                    </label>
-                  </div>
-
-                  {signupMutation.error ? (
-                    <p className="feedback feedback--error">
-                      {(signupMutation.error as ApiError).message}
-                    </p>
-                  ) : null}
-
-                  <button className="button button--primary" type="submit" disabled={signupMutation.isPending}>
-                    {signupMutation.isPending ? "שומר..." : "אישור השתבצות"}
-                  </button>
-                </form>
-              </section>
-            ) : null}
           </>
         ) : null}
       </section>
+
+      {selectedDay ? (
+        <div className="dialog-backdrop" onClick={() => setSelectedDayId(null)}>
+          <section
+            className="dialog-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="public-signup-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="dialog-card__header">
+              <div>
+                <p className="eyebrow">השתבצות חדשה</p>
+                <h4 id="public-signup-dialog-title">{selectedDayLabels?.hebrew}</h4>
+                <p className="muted">
+                  {selectedDayLabels?.english} · הבאת ארוחה עד {selectedDay.delivery_deadline}
+                </p>
+              </div>
+              <button className="button button--ghost" type="button" onClick={() => setSelectedDayId(null)}>
+                סגירה
+              </button>
+            </div>
+
+            <form className="form-grid" onSubmit={handleSubmit((values) => signupMutation.mutate(values))}>
+              <div className="field-row">
+                <label className="field">
+                  <span>שם מלא</span>
+                  <input {...register("volunteer_name")} />
+                  {errors.volunteer_name ? <small>{errors.volunteer_name.message}</small> : null}
+                </label>
+                <label className="field">
+                  <span>טלפון</span>
+                  <input {...register("phone")} />
+                  {errors.phone ? <small>{errors.phone.message}</small> : null}
+                </label>
+              </div>
+              <div className="field-row">
+                <label className="field">
+                  <span>חלבי / בשרי</span>
+                  <input {...register("meal_type")} placeholder="אופציונלי" />
+                </label>
+                <label className="field">
+                  <span>הערה</span>
+                  <input {...register("note")} placeholder="אופציונלי" />
+                </label>
+              </div>
+
+              {signupMutation.error ? (
+                <p className="feedback feedback--error">
+                  {(signupMutation.error as ApiError).message}
+                </p>
+              ) : null}
+
+              <div className="dialog-card__actions">
+                <button className="button button--primary" type="submit" disabled={signupMutation.isPending}>
+                  {signupMutation.isPending ? "שומר..." : "אישור השתבצות"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       {!hasOpenDays && trainQuery.data?.related_trains.length ? (
         <section className="panel">
