@@ -143,11 +143,11 @@ function buildSignupShareMessage(train: MealTrainDetail) {
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:\n${buildPublicLink(train.public_token)}`
 }
 
-function WhatsAppIcon() {
+function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg
       aria-hidden="true"
-      className="whatsapp-icon"
+      className={className}
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -259,9 +259,9 @@ function TrashIcon() {
   )
 }
 
-function ShareIcon() {
+function ShareIcon({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none">
       <path
         d="M15 8L19 4M19 4H15M19 4V8"
         stroke="currentColor"
@@ -1236,7 +1236,7 @@ export function AdminDashboardPage() {
                     </div>
                     <div className="form-actions form-actions--split">
                       <button
-                        className="button button--ghost button--whatsapp"
+                        className="button button--ghost button--share-action"
                         type="button"
                         onClick={() => {
                           window.open(
@@ -1246,11 +1246,11 @@ export function AdminDashboardPage() {
                           )
                         }}
                       >
-                        <WhatsAppIcon />
+                        <WhatsAppIcon className="button__icon button__icon--whatsapp" />
                         {shareableMotherPhone ? "פתיחת שיחה עם היולדת" : "שיתוף ליולדת"}
                       </button>
                       <button
-                        className="button button--primary button--whatsapp"
+                        className="button button--ghost button--share-action"
                         type="button"
                         disabled={!isSignupReady}
                         onClick={async () => {
@@ -1260,7 +1260,7 @@ export function AdminDashboardPage() {
                           await shareForVolunteers(selectedTrain)
                         }}
                       >
-                        <ShareIcon />
+                        <ShareIcon className="button__icon button__icon--share" />
                         {isSignupReady ? "שיתוף למבשלות" : "ממתין למילוי שאלון"}
                       </button>
                     </div>
