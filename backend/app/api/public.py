@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
@@ -33,6 +34,7 @@ from app.services.meal_trains import (
 
 
 router = APIRouter(prefix="/api/public", tags=["public"])
+logger = logging.getLogger(__name__)
 
 
 def _today_in_project_timezone() -> date:
@@ -55,6 +57,15 @@ def _future_day_buckets(train: MealTrain) -> tuple[list[MealDay], list[MealDay]]
     future_days = [day for day in train.days if day.date >= today]
     open_days = [day for day in future_days if day.status == MealDayStatus.open]
     return future_days, open_days
+
+
+def _day_status_counts(train: MealTrain) -> dict[str, int]:
+    return {
+        "open": sum(1 for day in train.days if day.status == MealDayStatus.open),
+        "assigned": sum(1 for day in train.days if day.status == MealDayStatus.assigned),
+        "not_needed": sum(1 for day in train.days if day.status == MealDayStatus.not_needed),
+        "total": len(train.days),
+    }
 
 
 def _get_train_by_intake_token(db: Session, token: str) -> MealTrain:
@@ -167,6 +178,7 @@ def submit_intake_form(
     db: Session = Depends(get_db),
 ) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
+    before_counts = _day_status_counts(train)
 
     if not payload.is_twins and not payload.baby_type:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="צריך לבחור מה נולד.")
@@ -221,6 +233,16 @@ def submit_intake_form(
 
     db.commit()
     db.refresh(train)
+    after_counts = _day_status_counts(train)
+    logger.info(
+        "intake_submitted train_id=%s is_twins=%s baby_type=%s status_before=%s status_after=%s choices=%s",
+        train.id,
+        train.is_twins,
+        train.baby_type.value if train.baby_type else "mixed",
+        before_counts,
+        after_counts,
+        len(payload.day_choices),
+    )
     return PublicIntakeResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
@@ -351,6 +373,13 @@ def create_birth_notice(
     db.add(train)
     db.commit()
     db.refresh(train)
+    logger.info(
+        "birth_notice_created train_id=%s is_twins=%s baby_type=%s total_days=%s",
+        train.id,
+        train.is_twins,
+        train.baby_type.value if train.baby_type else "mixed",
+        len(train.days),
+    )
 
     return PublicBirthNoticeCreateResponse(
         intake_token=train.intake_token,
@@ -388,6 +417,14 @@ def create_signup(day_id: int, payload: SignupCreate, db: Session = Depends(get_
     meal_day.status = MealDayStatus.assigned
     db.commit()
     db.refresh(signup)
+    logger.info(
+        "signup_created train_id=%s day_id=%s date=%s volunteer=%s phone=%s",
+        meal_day.meal_train_id,
+        meal_day.id,
+        meal_day.date,
+        payload.volunteer_name,
+        payload.phone,
+    )
     return SignupResponse.model_validate(signup)
 
 
@@ -414,4 +451,12 @@ def cancel_signup(day_id: int, payload: SignupCancelRequest, db: Session = Depen
     meal_day.status = MealDayStatus.open
     db.commit()
     db.refresh(meal_day)
+    logger.info(
+        "signup_cancelled train_id=%s day_id=%s date=%s volunteer=%s phone=%s",
+        meal_day.meal_train_id,
+        meal_day.id,
+        meal_day.date,
+        signup.volunteer_name,
+        signup.phone,
+    )
     return MealDayResponse.model_validate(meal_day)
