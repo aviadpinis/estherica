@@ -126,6 +126,8 @@ class MealTrainUpdate(BaseModel):
     contact_phone: str | None = None
     baby_type: str | None = None
     is_twins: bool | None = None
+    birth_date: date | None = None
+    start_date: date | None = None
     default_delivery_time: str | None = None
     reminder_time: str | None = None
     household_size: str | None = None

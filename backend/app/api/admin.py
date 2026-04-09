@@ -21,7 +21,7 @@ from app.schemas.meal_trains import (
     MealTrainSummary,
     MealTrainUpdate,
 )
-from app.services.meal_trains import build_default_days, generate_token, sync_default_days
+from app.services.meal_trains import build_default_days, generate_token, sync_default_days, validate_schedule_window
 
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -314,6 +314,17 @@ def update_meal_train(
     if "is_twins" in updates:
         train.is_twins = updates["is_twins"]
 
+    if "birth_date" in updates or "start_date" in updates:
+        effective_birth_date = updates.get("birth_date", train.birth_date or train.start_date)
+        effective_start_date = updates.get("start_date", train.start_date)
+        validate_schedule_window(effective_birth_date, effective_start_date)
+
+    if "birth_date" in updates:
+        train.birth_date = updates["birth_date"]
+
+    if "start_date" in updates:
+        train.start_date = updates["start_date"]
+
     for field in ("family_title", "mother_name", "contact_phone", "default_delivery_time", "reminder_time", "gift_delivered"):
         if field in updates:
             setattr(train, field, updates[field])
@@ -326,7 +337,7 @@ def update_meal_train(
             if field in updates:
                 setattr(train.intake_form, field, updates[field] or None)
 
-    if any(field in updates for field in ("is_twins", "default_delivery_time")):
+    if any(field in updates for field in ("is_twins", "birth_date", "start_date", "default_delivery_time")):
         sync_default_days(train, train.default_delivery_time)
 
     db.commit()

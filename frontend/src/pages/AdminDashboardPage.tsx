@@ -55,11 +55,22 @@ const editTrainSchema = z.object({
   contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
   is_twins: z.boolean(),
+  birth_date: z.string().min(1, "צריך תאריך לידה"),
+  start_date: z.string().min(1, "צריך לבחור ממתי לפתוח את הלוח"),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
   household_size: z.string().optional(),
   children_ages: z.string().optional(),
   lobby_visible: z.boolean().optional(),
+}).superRefine((values, ctx) => {
+  const scheduleError = getScheduleWindowError(values.birth_date, values.start_date)
+  if (scheduleError) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["start_date"],
+      message: scheduleError,
+    })
+  }
 })
 
 const addDaySchema = z.object({
@@ -522,6 +533,8 @@ export function AdminDashboardPage() {
       contact_phone: "",
       baby_type: "",
       is_twins: false,
+      birth_date: todayIso,
+      start_date: todayIso,
       default_delivery_time: "18:00",
       reminder_time: "09:00",
     },
@@ -637,6 +650,8 @@ export function AdminDashboardPage() {
       contact_phone: train.contact_phone ?? "",
       baby_type: train.baby_type ?? "",
       is_twins: train.is_twins,
+      birth_date: train.birth_date,
+      start_date: train.start_date,
       default_delivery_time: train.default_delivery_time,
       reminder_time: train.reminder_time,
       household_size: train.intake_form?.household_size ?? "",
@@ -903,6 +918,8 @@ export function AdminDashboardPage() {
   const createStartDate = createForm.watch("start_date")
   const editBabyType = editForm.watch("baby_type")
   const editIsTwins = editForm.watch("is_twins")
+  const editBirthDate = editForm.watch("birth_date")
+  const editStartDate = editForm.watch("start_date")
   const createBirthChoice = getBirthChoice(createBabyType || null, createIsTwins)
   const editBirthChoice = getBirthChoice(editBabyType || null, editIsTwins)
   const createTwinsChoice = getTwinsChoice(createBabyType || null, createIsTwins)
@@ -963,6 +980,8 @@ export function AdminDashboardPage() {
                 contact_phone: selectedTrain.contact_phone ?? "",
                 baby_type: selectedTrain.baby_type ?? "",
                 is_twins: selectedTrain.is_twins,
+                birth_date: selectedTrain.birth_date,
+                start_date: selectedTrain.start_date,
                 default_delivery_time: selectedTrain.default_delivery_time,
                 reminder_time: selectedTrain.reminder_time,
                 lobby_visible: !selectedTrain.lobby_visible,
@@ -1012,6 +1031,17 @@ export function AdminDashboardPage() {
       createForm.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
     }
   }, [createBirthDate, createForm, createStartDate])
+
+  useEffect(() => {
+    if (!editBirthDate) {
+      return
+    }
+
+    const nextStartDate = clampScheduleStartDate(editBirthDate, editStartDate)
+    if (nextStartDate !== editStartDate) {
+      editForm.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+    }
+  }, [editBirthDate, editForm, editStartDate])
 
   return (
     <PageShell
@@ -1441,6 +1471,28 @@ export function AdminDashboardPage() {
                             disabled={!selectedTrain.intake_form}
                             placeholder={selectedTrain.intake_form ? "" : "יתעדכן אחרי מילוי השאלון"}
                           />
+                        </label>
+                      </div>
+
+                      <div className="field-row">
+                        <label className="field">
+                          <span>תאריך לידה</span>
+                          <input type="date" max={todayIso} {...editForm.register("birth_date")} />
+                          {editForm.formState.errors.birth_date ? (
+                            <small>{editForm.formState.errors.birth_date.message}</small>
+                          ) : null}
+                        </label>
+                        <label className="field">
+                          <span>ממתי לפתוח את הלוח</span>
+                          <input
+                            type="date"
+                            min={editBirthDate ? getEarliestScheduleStartDate(editBirthDate) : undefined}
+                            max={editBirthDate ? getLatestScheduleStartDate(editBirthDate) : undefined}
+                            {...editForm.register("start_date")}
+                          />
+                          {editForm.formState.errors.start_date ? (
+                            <small>{editForm.formState.errors.start_date.message}</small>
+                          ) : null}
                         </label>
                       </div>
 
