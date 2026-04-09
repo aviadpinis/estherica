@@ -60,7 +60,7 @@ type AddDayValues = z.infer<typeof addDaySchema>
 type CreateAdminValues = z.infer<typeof createAdminSchema>
 
 type AdminTab = "cases" | "stats" | "new" | "admins"
-type CaseDetailTab = "summary" | "calendar" | "details"
+type CaseDetailTab = "summary" | "links" | "calendar" | "details"
 type ConfirmAction = "gift" | "visibility" | "delete"
 
 interface DayDraft {
@@ -83,6 +83,7 @@ const adminTabs: TabOption[] = [
 
 const caseDetailTabs: Array<{ id: CaseDetailTab; label: string }> = [
   { id: "summary", label: "סיכום" },
+  { id: "links", label: "קישורים" },
   { id: "calendar", label: "לוח" },
   { id: "details", label: "עריכת פרטים" },
 ]
@@ -322,6 +323,31 @@ function getTrainTone(train: MealTrainSummary) {
   return "success" as const
 }
 
+function sortTrainSummaries(trains: MealTrainSummary[]) {
+  return trains.slice().sort((left, right) => {
+    const riskDelta = getRiskPriority(left) - getRiskPriority(right)
+    if (riskDelta !== 0) {
+      return riskDelta
+    }
+
+    const urgentDelta = right.urgent_open_days - left.urgent_open_days
+    if (urgentDelta !== 0) {
+      return urgentDelta
+    }
+
+    const openDelta = right.open_days - left.open_days
+    if (openDelta !== 0) {
+      return openDelta
+    }
+
+    return left.family_title.localeCompare(right.family_title, "he")
+  })
+}
+
+function getTrainCardTone(train: Pick<MealTrainSummary, "baby_type"> | Pick<MealTrainDetail, "baby_type">) {
+  return train.baby_type ?? "neutral"
+}
+
 function ProgressDonut({
   assignedDays,
   totalDays,
@@ -349,6 +375,56 @@ function ProgressDonut({
         <span>
           {assignedDays}/{totalDays}
         </span>
+      </div>
+    </div>
+  )
+}
+
+function CalendarBreakdownChart({
+  openDays,
+  assignedDays,
+  notNeededDays,
+}: {
+  openDays: number
+  assignedDays: number
+  notNeededDays: number
+}) {
+  const total = openDays + assignedDays + notNeededDays
+  const openPercent = total ? Math.round((openDays / total) * 100) : 0
+  const assignedPercent = total ? Math.round((assignedDays / total) * 100) : 0
+  const notNeededPercent = Math.max(0, 100 - openPercent - assignedPercent)
+
+  return (
+    <div className="calendar-breakdown">
+      <div
+        className="calendar-breakdown__chart"
+        style={
+          {
+            "--slice-open": `${openPercent}%`,
+            "--slice-assigned": `${assignedPercent}%`,
+            "--slice-not-needed": `${notNeededPercent}%`,
+          } as CSSProperties
+        }
+        aria-label={`מתוך ${total} ימים: ${openDays} נשארו, ${assignedDays} נסגרו, ${notNeededDays} לא צריך`}
+      >
+        <div className="calendar-breakdown__center">
+          <strong>{total}</strong>
+          <span>ימים</span>
+        </div>
+      </div>
+      <div className="calendar-breakdown__legend">
+        <div className="calendar-breakdown__item">
+          <span className="calendar-breakdown__swatch calendar-breakdown__swatch--open" />
+          <span>נשארו: {openDays}</span>
+        </div>
+        <div className="calendar-breakdown__item">
+          <span className="calendar-breakdown__swatch calendar-breakdown__swatch--assigned" />
+          <span>נסגרו: {assignedDays}</span>
+        </div>
+        <div className="calendar-breakdown__item">
+          <span className="calendar-breakdown__swatch calendar-breakdown__swatch--not-needed" />
+          <span>לא צריך: {notNeededDays}</span>
+        </div>
       </div>
     </div>
   )
@@ -654,14 +730,22 @@ export function AdminDashboardPage() {
         token,
       ),
     onSuccess: (_, trainId) => {
-      setFeedback("היולדת נמחקה.")
+      const cachedTrains = queryClient.getQueryData<MealTrainSummary[]>(["meal-trains"]) ?? []
+      const nextTrain =
+        sortTrainSummaries(cachedTrains.filter((train) => !train.is_archived && train.id !== trainId))[0] ??
+        cachedTrains.find((train) => train.id !== trainId) ??
+        null
+
+      setFeedback("היולדת נמחקה. עברנו למקרה הבא.")
       setConfirmAction(null)
       queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
       queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
       queryClient.removeQueries({ queryKey: ["meal-train", trainId] })
-      if (selectedTrainId === trainId) {
-        setSelectedTrainId(null)
-        setSelectedDayId(null)
+      setSelectedTrainId(nextTrain?.id ?? null)
+      setSelectedDayId(null)
+      setActiveCaseTab("summary")
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" })
       }
     },
   })
@@ -714,28 +798,7 @@ export function AdminDashboardPage() {
   const selectedDraft = selectedDay ? dayDrafts[selectedDay.id] : null
   const selectedTrainSummary = trainsQuery.data?.find((train) => train.id === selectedTrainId) ?? null
   const babyCopy = getBabyCopy(selectedTrain?.baby_type)
-  const activeTrains =
-    trainsQuery.data
-      ?.filter((train) => !train.is_archived)
-      .slice()
-      .sort((left, right) => {
-        const riskDelta = getRiskPriority(left) - getRiskPriority(right)
-        if (riskDelta !== 0) {
-          return riskDelta
-        }
-
-        const urgentDelta = right.urgent_open_days - left.urgent_open_days
-        if (urgentDelta !== 0) {
-          return urgentDelta
-        }
-
-        const openDelta = right.open_days - left.open_days
-        if (openDelta !== 0) {
-          return openDelta
-        }
-
-        return left.family_title.localeCompare(right.family_title, "he")
-      }) ?? []
+  const activeTrains = sortTrainSummaries(trainsQuery.data?.filter((train) => !train.is_archived) ?? [])
   const archivedTrains = trainsQuery.data?.filter((train) => train.is_archived) ?? []
   const totalTrackedDays =
     (overviewQuery.data?.total_open_days ?? 0) + (overviewQuery.data?.total_assigned_days ?? 0)
@@ -748,6 +811,7 @@ export function AdminDashboardPage() {
     ) ?? null
   const selectedTrainIsArchived =
     selectedTrainEndDate != null && selectedTrainEndDate < getLocalTodayIso()
+  const selectedTrainNotNeededDays = selectedTrain?.days.filter((day) => day.status === "not_needed").length ?? 0
 
   const errorMessage =
     (createMutation.error as ApiError | null)?.message ||
@@ -859,7 +923,7 @@ export function AdminDashboardPage() {
                   {activeTrains.map((train) => (
                     <button
                       key={train.id}
-                      className={`train-card train-card--carousel ${selectedTrainId === train.id ? "train-card--active" : ""}`}
+                      className={`train-card train-card--carousel train-card--${getTrainCardTone(train)} ${selectedTrainId === train.id ? "train-card--active" : ""}`}
                       onClick={() => openTrain(train.id)}
                       type="button"
                     >
@@ -904,7 +968,7 @@ export function AdminDashboardPage() {
                     {archivedTrains.map((train) => (
                       <button
                         key={train.id}
-                        className={`train-card train-card--carousel ${selectedTrainId === train.id ? "train-card--active" : ""}`}
+                        className={`train-card train-card--carousel train-card--${getTrainCardTone(train)} ${selectedTrainId === train.id ? "train-card--active" : ""}`}
                         onClick={() => openTrain(train.id)}
                         type="button"
                       >
@@ -1012,63 +1076,6 @@ export function AdminDashboardPage() {
                         <TrashIcon />
                       </button>
                     </div>
-
-                    <div className="link-stack">
-                    <button
-                      className="button button--ghost"
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(buildIntakeLink(selectedTrain.intake_token))
-                        setFeedback("הקישור ליולדת הועתק.")
-                      }}
-                    >
-                      העתקת קישור ליולדת
-                    </button>
-                    <button
-                      className="button button--ghost button--whatsapp"
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          buildWhatsAppLink(buildIntakeShareMessage(selectedTrain), shareableMotherPhone),
-                          "_blank",
-                          "noopener,noreferrer",
-                        )
-                      }}
-                    >
-                      <WhatsAppIcon />
-                      {shareableMotherPhone ? "פתיחת שיחה עם היולדת בוואטסאפ" : "שיתוף ליולדת בוואטסאפ"}
-                    </button>
-                    {isSignupReady ? (
-                      <>
-                        <button
-                          className="button button--ghost"
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(buildPublicLink(selectedTrain.public_token))
-                            setFeedback("קישור ההשתבצות הועתק.")
-                          }}
-                        >
-                          העתקת קישור השתבצות
-                        </button>
-                        <button
-                          className="button button--primary button--whatsapp"
-                          type="button"
-                          onClick={() => {
-                            window.open(
-                              buildWhatsAppLink(buildSignupShareMessage(selectedTrain)),
-                              "_blank",
-                              "noopener,noreferrer",
-                            )
-                          }}
-                        >
-                          <WhatsAppIcon />
-                          שיתוף ההשתבצות בוואטסאפ
-                        </button>
-                      </>
-                    ) : (
-                      <p className="muted">אחרי שהיולדת תמלא את השאלון, לוח ההשתבצות ייפתח אוטומטית.</p>
-                    )}
-                  </div>
                   </div>
                 </div>
 
@@ -1094,25 +1101,16 @@ export function AdminDashboardPage() {
                           <strong>סטטוס:</strong> {selectedTrain.intake_form ? "מולא בהצלחה" : "ממתין למילוי"}
                         </p>
                         <p>
-                          <strong>פלאפון לשיתוף:</strong> {shareableMotherPhone || "לא הוזן עדיין"}
+                          <strong>פלאפון לשיחה עם היולדת:</strong> {shareableMotherPhone || "לא הוזן עדיין"}
                         </p>
                         <p>
-                          <strong>קישור אישי:</strong>
+                          <strong>לובי ציבורי:</strong> {selectedTrain.lobby_visible ? "מופיעה בלובי" : "מוסתרת מהלובי"}
                         </p>
-                        <code>{buildIntakeLink(selectedTrain.intake_token)}</code>
-                        {isSignupReady ? (
-                          <>
-                            <p>
-                              <strong>קישור השתבצות:</strong>
-                            </p>
-                            <code>{buildPublicLink(selectedTrain.public_token)}</code>
-                            <p>
-                              <strong>לובי ציבורי:</strong> {selectedTrain.lobby_visible ? "מופיעה בלובי" : "מוסתרת מהלובי"}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="muted">קישור ההשתבצות ייפתח אוטומטית מיד אחרי מילוי השאלון.</p>
-                        )}
+                        <p className="muted">
+                          {isSignupReady
+                            ? "קישורי השיתוף מחכים בטאב קישורים."
+                            : "אחרי שהיולדת תמלא את השאלון, יופיע בטאב קישורים גם שיתוף למבשלות."}
+                        </p>
                       </div>
                     </article>
 
@@ -1154,15 +1152,20 @@ export function AdminDashboardPage() {
 
                     <article className="info-card">
                       <h4>מצב הלוח</h4>
+                      <CalendarBreakdownChart
+                        openDays={selectedTrainSummary?.open_days ?? 0}
+                        assignedDays={selectedTrainSummary?.assigned_days ?? 0}
+                        notNeededDays={selectedTrainNotNeededDays}
+                      />
                       <div className="detail-list">
                         <p>
-                          <strong>סה"כ ימים:</strong> {selectedTrain.days.length}
+                          <strong>פינוקים שנשארו:</strong> {selectedTrainSummary?.open_days ?? 0}
                         </p>
                         <p>
-                          <strong>ימים סגורים:</strong> {selectedTrainSummary?.assigned_days ?? 0}
+                          <strong>פינוקים שנסגרו:</strong> {selectedTrainSummary?.assigned_days ?? 0}
                         </p>
                         <p>
-                          <strong>ימים פתוחים:</strong> {selectedTrainSummary?.open_days ?? 0}
+                          <strong>ימים שלא צריך:</strong> {selectedTrainNotNeededDays}
                         </p>
                         <p>
                           <strong>ימים דחופים:</strong> {selectedTrainSummary?.urgent_open_days ?? 0}
@@ -1171,6 +1174,49 @@ export function AdminDashboardPage() {
                     </article>
 
                   </section>
+                ) : null}
+
+                {activeCaseTab === "links" ? (
+                  <article className="info-card">
+                    <h4>קישורים ושיתוף</h4>
+                    <div className="detail-list">
+                      <p className="muted">כאן שולחים רק את מה שצריך כרגע, בלי העתקות וקישורים ארוכים.</p>
+                    </div>
+                    <div className="form-actions form-actions--split">
+                      <button
+                        className="button button--ghost button--whatsapp"
+                        type="button"
+                        onClick={() => {
+                          window.open(
+                            buildWhatsAppLink(buildIntakeShareMessage(selectedTrain), shareableMotherPhone),
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }}
+                      >
+                        <WhatsAppIcon />
+                        {shareableMotherPhone ? "פתיחת שיחה עם היולדת" : "שיתוף ליולדת"}
+                      </button>
+                      <button
+                        className="button button--primary button--whatsapp"
+                        type="button"
+                        disabled={!isSignupReady}
+                        onClick={() => {
+                          if (!isSignupReady) {
+                            return
+                          }
+                          window.open(
+                            buildWhatsAppLink(buildSignupShareMessage(selectedTrain)),
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }}
+                      >
+                        <WhatsAppIcon />
+                        {isSignupReady ? "שיתוף למבשלות" : "ממתין למילוי שאלון"}
+                      </button>
+                    </div>
+                  </article>
                 ) : null}
 
                 {activeCaseTab === "calendar" ? (
