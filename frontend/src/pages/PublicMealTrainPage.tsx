@@ -194,7 +194,9 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                   <h1>{pageTitle}</h1>
                   <p>{pageSubtitle}</p>
                 </div>
-                <BrandMark compact />
+                <Link to="/" className="public-train-hero__brand" aria-label="חזרה ללובי">
+                  <BrandMark compact />
+                </Link>
               </div>
 
               <div className="public-train-hero__details">
