@@ -61,6 +61,7 @@ type CreateAdminValues = z.infer<typeof createAdminSchema>
 
 type AdminTab = "cases" | "stats" | "new" | "admins"
 type CaseDetailTab = "summary" | "calendar" | "details"
+type ConfirmAction = "gift" | "visibility" | "delete"
 
 interface DayDraft {
   status: MealDay["status"]
@@ -160,6 +161,98 @@ function WhatsAppIcon() {
       <path
         d="M9.4 8.8C9.7 8.1 10 8 10.3 8C10.5 8 10.8 8 11 8.1C11.2 8.1 11.4 8.2 11.5 8.5C11.7 8.9 12 9.9 12 10C12.1 10.2 12 10.4 11.9 10.5C11.8 10.7 11.6 10.9 11.5 11C11.4 11.1 11.2 11.3 11.4 11.6C11.6 11.9 12.1 12.8 12.9 13.5C13.9 14.3 14.7 14.6 15 14.8C15.3 14.9 15.5 14.9 15.7 14.7C15.9 14.5 16.5 13.8 16.7 13.5C16.9 13.3 17 13.2 17.3 13.3C17.5 13.4 18.8 14 19 14.1C19.2 14.2 19.4 14.3 19.4 14.5C19.4 14.7 19.2 15.7 18.5 16.3C17.8 16.8 16.8 17 15.8 16.7C14.8 16.4 13.4 15.9 12 14.7C10.3 13.3 9.2 11.6 8.9 10.9C8.6 10.2 8.9 9.6 9.4 8.8Z"
         fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+function GiftIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path d="M12 4V20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 9H20V20H4V9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M4 9H20" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 9H8.6C7.16 9 6 7.84 6 6.4C6 4.97 7.16 3.8 8.6 3.8C10.93 3.8 12 6.2 12 7.4V9Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 9H15.4C16.84 9 18 7.84 18 6.4C18 4.97 16.84 3.8 15.4 3.8C13.07 3.8 12 6.2 12 7.4V9Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function VisibilityIcon({ hidden }: { hidden: boolean }) {
+  if (hidden) {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <path
+          d="M3 3L21 21"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M10.6 6.18C11.06 6.06 11.52 6 12 6C17.4 6 21 12 21 12C20.34 13.24 19.43 14.33 18.35 15.22"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M14.12 14.12C13.57 14.67 12.81 15 12 15C10.34 15 9 13.66 9 12C9 11.19 9.33 10.43 9.88 9.88"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6.11 6.11C4.11 7.3 2.66 9.3 1.99 10.56C1.73 11.05 1.73 11.62 1.99 12.11C3 14.01 6.39 18 12 18C13.73 18 15.26 17.62 16.6 16.99"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    )
+  }
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M1.99 12.11C1.73 11.62 1.73 11.05 1.99 10.56C3 8.66 6.39 4.67 12 4.67C17.61 4.67 21 8.66 22.01 10.56C22.27 11.05 22.27 11.62 22.01 12.11C21 14.01 17.61 18 12 18C6.39 18 3 14.01 1.99 12.11Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="11.33" r="3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path d="M4 7H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M7 7V18C7 19.1 7.9 20 9 20H15C16.1 20 17 19.1 17 18V7"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M10 11V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M14 11V16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M9 4H15L16 7H8L9 4Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
       />
     </svg>
   )
@@ -269,6 +362,7 @@ export function AdminDashboardPage() {
   const [selectedTrainId, setSelectedTrainId] = useState<number | null>(null)
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null)
   const [dayDrafts, setDayDrafts] = useState<Record<number, DayDraft>>({})
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [notificationPermission, setNotificationPermission] = useState(getInitialNotificationPermission)
   const intakeStateRef = useRef<Record<number, boolean>>({})
@@ -476,6 +570,7 @@ export function AdminDashboardPage() {
       ),
     onSuccess: (updated) => {
       setFeedback("פרטי המקרה עודכנו.")
+      setConfirmAction(null)
       queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
       queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
       queryClient.setQueryData(["meal-train", updated.id], updated)
@@ -542,6 +637,7 @@ export function AdminDashboardPage() {
       ),
     onSuccess: (updated) => {
       setFeedback(updated.gift_delivered ? "השי סומן כנמסר." : "סימון השי בוטל.")
+      setConfirmAction(null)
       queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
       queryClient.invalidateQueries({ queryKey: ["meal-train", selectedTrainId] })
       queryClient.setQueryData(["meal-train", updated.id], updated)
@@ -559,6 +655,7 @@ export function AdminDashboardPage() {
       ),
     onSuccess: (_, trainId) => {
       setFeedback("היולדת נמחקה.")
+      setConfirmAction(null)
       queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
       queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
       queryClient.removeQueries({ queryKey: ["meal-train", trainId] })
@@ -603,6 +700,7 @@ export function AdminDashboardPage() {
   function openTrain(trainId: number, nextTab: AdminTab = "cases") {
     setSelectedTrainId(trainId)
     setSelectedDayId(null)
+    setConfirmAction(null)
     setActiveCaseTab("summary")
     setActiveTab(nextTab)
   }
@@ -667,6 +765,45 @@ export function AdminDashboardPage() {
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const isSignupReady = selectedTrain?.status === "published"
   const shareableMotherPhone = selectedTrain?.intake_form?.contact_phone ?? selectedTrain?.contact_phone ?? null
+  const confirmActionConfig =
+    selectedTrain && confirmAction
+      ? {
+          gift: {
+            title: selectedTrain.gift_delivered ? "לבטל את סימון השי?" : "לסמן שהשי נמסר?",
+            description: selectedTrain.gift_delivered
+              ? `המערכת תסמן שהשי של ${selectedTrain.family_title} עדיין לא נמסר.`
+              : `המערכת תסמן שהשי של ${selectedTrain.family_title} כבר נמסר.`,
+            confirmLabel: selectedTrain.gift_delivered ? "ביטול סימון" : "סימון שי נמסר",
+            tone: "secondary" as const,
+            onConfirm: () => updateGiftMutation.mutate(!selectedTrain.gift_delivered),
+          },
+          visibility: {
+            title: selectedTrain.lobby_visible ? "להסתיר את היולדת מהלובי?" : "להחזיר את היולדת ללובי?",
+            description: selectedTrain.lobby_visible
+              ? `היולדת תרד מהלובי הציבורי, אבל קישורים שכבר נשלחו ימשיכו לעבוד.`
+              : `היולדת תחזור להופיע בלובי הציבורי ובאזור של עוד נשים שצריכות פינוק.`,
+            confirmLabel: selectedTrain.lobby_visible ? "הסתרה מהלובי" : "החזרה ללובי",
+            tone: "secondary" as const,
+            onConfirm: () =>
+              updateTrainMutation.mutate({
+                family_title: selectedTrain.family_title,
+                mother_name: selectedTrain.mother_name ?? "",
+                contact_phone: selectedTrain.contact_phone ?? "",
+                baby_type: selectedTrain.baby_type ?? "",
+                default_delivery_time: selectedTrain.default_delivery_time,
+                reminder_time: selectedTrain.reminder_time,
+                lobby_visible: !selectedTrain.lobby_visible,
+              }),
+          },
+          delete: {
+            title: "למחוק את היולדת?",
+            description: `המחיקה של ${selectedTrain.family_title} תסיר את הלוח, השאלון וכל ההשתבצויות שלה. אי אפשר לשחזר אחר כך.`,
+            confirmLabel: "מחיקת יולדת",
+            tone: "danger" as const,
+            onConfirm: () => deleteTrainMutation.mutate(selectedTrain.id),
+          },
+        }[confirmAction]
+      : null
 
   return (
     <PageShell
@@ -842,7 +979,41 @@ export function AdminDashboardPage() {
                     ) : null}
                   </div>
 
-                  <div className="link-stack">
+                  <div className="admin-main__actions">
+                    <div className="icon-action-row" aria-label="פעולות מהירות ליולדת">
+                      <button
+                        className={`icon-action-button ${selectedTrain.gift_delivered ? "icon-action-button--success" : ""}`}
+                        type="button"
+                        title={selectedTrain.gift_delivered ? "ביטול סימון שי" : "סימון שי נמסר"}
+                        aria-label={selectedTrain.gift_delivered ? "ביטול סימון שי" : "סימון שי נמסר"}
+                        disabled={updateGiftMutation.isPending}
+                        onClick={() => setConfirmAction("gift")}
+                      >
+                        <GiftIcon />
+                      </button>
+                      <button
+                        className={`icon-action-button ${!selectedTrain.lobby_visible ? "icon-action-button--warning" : ""}`}
+                        type="button"
+                        title={selectedTrain.lobby_visible ? "הסתרה מהלובי" : "החזרה ללובי"}
+                        aria-label={selectedTrain.lobby_visible ? "הסתרה מהלובי" : "החזרה ללובי"}
+                        disabled={updateTrainMutation.isPending}
+                        onClick={() => setConfirmAction("visibility")}
+                      >
+                        <VisibilityIcon hidden={!selectedTrain.lobby_visible} />
+                      </button>
+                      <button
+                        className="icon-action-button icon-action-button--danger"
+                        type="button"
+                        title="מחיקת יולדת"
+                        aria-label="מחיקת יולדת"
+                        disabled={deleteTrainMutation.isPending}
+                        onClick={() => setConfirmAction("delete")}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+
+                    <div className="link-stack">
                     <button
                       className="button button--ghost"
                       type="button"
@@ -897,6 +1068,7 @@ export function AdminDashboardPage() {
                     ) : (
                       <p className="muted">אחרי שהיולדת תמלא את השאלון, לוח ההשתבצות ייפתח אוטומטית.</p>
                     )}
+                  </div>
                   </div>
                 </div>
 
@@ -998,85 +1170,6 @@ export function AdminDashboardPage() {
                       </div>
                     </article>
 
-                    <article className="info-card">
-                      <h4>שי ליולדת</h4>
-                      <div className="detail-list">
-                        <p>
-                          <strong>סטטוס:</strong> {selectedTrain.gift_delivered ? "השי כבר נמסר" : "השי עדיין לא סומן כנמסר"}
-                        </p>
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          disabled={updateGiftMutation.isPending}
-                          onClick={() => updateGiftMutation.mutate(!selectedTrain.gift_delivered)}
-                        >
-                          {updateGiftMutation.isPending
-                            ? "שומרת..."
-                            : selectedTrain.gift_delivered
-                              ? "ביטול סימון שי"
-                              : "סימון שי נמסר"}
-                        </button>
-                      </div>
-                    </article>
-
-                    <article className="info-card">
-                      <h4>נראות ציבורית</h4>
-                      <div className="detail-list">
-                        <p>
-                          <strong>סטטוס בלובי:</strong> {selectedTrain.lobby_visible ? "מופיעה ביולדות הציבוריות" : "מוסתרת כרגע מהלובי"}
-                        </p>
-                        <p className="muted">
-                          הסתרה מהלובי לא שוברת קישורים שכבר נשלחו. היא רק מורידה את היולדת מרשימת הגילוי הציבורית.
-                        </p>
-                        <button
-                          className="button button--secondary"
-                          type="button"
-                          disabled={updateTrainMutation.isPending}
-                          onClick={() => updateTrainMutation.mutate({
-                            family_title: selectedTrain.family_title,
-                            mother_name: selectedTrain.mother_name ?? "",
-                            contact_phone: selectedTrain.contact_phone ?? "",
-                            baby_type: selectedTrain.baby_type ?? "",
-                            default_delivery_time: selectedTrain.default_delivery_time,
-                            reminder_time: selectedTrain.reminder_time,
-                            lobby_visible: !selectedTrain.lobby_visible,
-                          })}
-                        >
-                          {updateTrainMutation.isPending
-                            ? "שומרת..."
-                            : selectedTrain.lobby_visible
-                              ? "הסתרה מהלובי"
-                              : "החזרה ללובי"}
-                        </button>
-                      </div>
-                    </article>
-
-                    <article className="info-card info-card--danger">
-                      <h4>מחיקת יולדת</h4>
-                      <div className="detail-list">
-                        <p>
-                          <strong>מתי להשתמש:</strong> רק אם נפתח מקרה כפול או אם זו יולדת שלא אמורה להישאר במערכת.
-                        </p>
-                        <p className="muted">המחיקה תסיר גם את הלוח, השאלון וההשתבצויות שלה.</p>
-                        <button
-                          className="button button--danger"
-                          type="button"
-                          disabled={deleteTrainMutation.isPending}
-                          onClick={() => {
-                            if (!selectedTrain) {
-                              return
-                            }
-                            const shouldDelete = window.confirm(`למחוק את ${selectedTrain.family_title}? אי אפשר לשחזר אחר כך.`)
-                            if (!shouldDelete) {
-                              return
-                            }
-                            deleteTrainMutation.mutate(selectedTrain.id)
-                          }}
-                        >
-                          {deleteTrainMutation.isPending ? "מוחקת..." : "מחיקת יולדת"}
-                        </button>
-                      </div>
-                    </article>
                   </section>
                 ) : null}
 
@@ -1444,6 +1537,45 @@ export function AdminDashboardPage() {
             </form>
           </article>
         </section>
+      ) : null}
+
+      {confirmActionConfig ? (
+        <div className="dialog-backdrop" onClick={() => setConfirmAction(null)}>
+          <section
+            className="dialog-card dialog-card--confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-train-action-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="dialog-card__header">
+              <div>
+                <p className="eyebrow">אישור פעולה</p>
+                <h4 id="confirm-train-action-title">{confirmActionConfig.title}</h4>
+              </div>
+              <button className="button button--ghost" type="button" onClick={() => setConfirmAction(null)}>
+                ביטול
+              </button>
+            </div>
+
+            <p className="muted">{confirmActionConfig.description}</p>
+
+            <div className="dialog-card__actions">
+              <button
+                className={`button ${confirmActionConfig.tone === "danger" ? "button--danger" : "button--secondary"}`}
+                type="button"
+                disabled={
+                  updateGiftMutation.isPending || updateTrainMutation.isPending || deleteTrainMutation.isPending
+                }
+                onClick={confirmActionConfig.onConfirm}
+              >
+                {updateGiftMutation.isPending || updateTrainMutation.isPending || deleteTrainMutation.isPending
+                  ? "שומרת..."
+                  : confirmActionConfig.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {selectedDay && selectedDraft ? (
