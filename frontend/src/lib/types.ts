@@ -140,7 +140,12 @@ export interface PublicLobbyTrain {
   open_days: number
   assigned_days: number
   next_open_date: string | null
-  stage: "needs_signups" | "ongoing"
+  stage: "needs_signups" | "ongoing" | "recent"
+}
+
+export interface PublicLobbyData {
+  active_trains: PublicLobbyTrain[]
+  recent_trains: PublicLobbyTrain[]
 }
 
 export interface PublicVolunteerSignup {

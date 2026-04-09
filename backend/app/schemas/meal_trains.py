@@ -195,6 +195,11 @@ class PublicLobbyTrainResponse(BaseModel):
     stage: str
 
 
+class PublicLobbyResponse(BaseModel):
+    active_trains: list[PublicLobbyTrainResponse]
+    recent_trains: list[PublicLobbyTrainResponse]
+
+
 class PublicVolunteerSignupsLookup(BaseModel):
     volunteer_key: str | None = None
     phone: str | None = None

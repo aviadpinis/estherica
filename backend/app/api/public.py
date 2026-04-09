@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +15,7 @@ from app.schemas.meal_trains import (
     PublicBirthNoticeCreate,
     PublicBirthNoticeCreateResponse,
     PublicIntakeResponse,
+    PublicLobbyResponse,
     PublicLobbyTrainResponse,
     PublicMealTrainResponse,
     PublicMealTrainSuggestion,
@@ -153,6 +154,36 @@ def _build_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
     )
 
 
+def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
+    today = _today_in_project_timezone()
+    recent_cutoff = today - timedelta(days=30)
+    recent_days = [
+        day
+        for day in train.days
+        if recent_cutoff <= day.date < today and day.status in (MealDayStatus.assigned, MealDayStatus.not_needed)
+    ]
+    if not recent_days:
+        return None
+
+    assigned_days = [day for day in recent_days if day.status == MealDayStatus.assigned]
+    if not assigned_days:
+        return None
+
+    end_date = max((day.date for day in recent_days), default=None)
+    return PublicLobbyTrainResponse(
+        family_title=train.family_title,
+        baby_type=train.baby_type.value if train.baby_type else None,
+        is_twins=train.is_twins,
+        public_token=train.public_token,
+        start_date=train.start_date,
+        end_date=end_date,
+        open_days=0,
+        assigned_days=len(assigned_days),
+        next_open_date=None,
+        stage="recent",
+    )
+
+
 @router.get("/intake/{token}", response_model=PublicIntakeResponse)
 def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
@@ -286,8 +317,8 @@ def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> P
     )
 
 
-@router.get("/lobby", response_model=list[PublicLobbyTrainResponse])
-def get_public_lobby(db: Session = Depends(get_db)) -> list[PublicLobbyTrainResponse]:
+@router.get("/lobby", response_model=PublicLobbyResponse)
+def get_public_lobby(db: Session = Depends(get_db)) -> PublicLobbyResponse:
     trains = (
         db.query(MealTrain)
         .options(joinedload(MealTrain.days))
@@ -296,14 +327,22 @@ def get_public_lobby(db: Session = Depends(get_db)) -> list[PublicLobbyTrainResp
         .all()
     )
 
-    lobby_trains = [entry for train in trains if (entry := _build_lobby_train(train)) is not None]
-    lobby_trains.sort(
+    active_trains = [entry for train in trains if (entry := _build_lobby_train(train)) is not None]
+    active_trains.sort(
         key=lambda train: (
             0 if train.open_days > 0 else 1,
             train.next_open_date or train.end_date or train.start_date,
         )
     )
-    return lobby_trains
+    recent_trains = [entry for train in trains if (entry := _build_recent_lobby_train(train)) is not None]
+    recent_trains.sort(
+        key=lambda train: (train.end_date or train.start_date),
+        reverse=True,
+    )
+    return PublicLobbyResponse(
+        active_trains=active_trains,
+        recent_trains=recent_trains[:8],
+    )
 
 
 @router.post("/volunteer-signups", response_model=list[PublicVolunteerSignupResponse])

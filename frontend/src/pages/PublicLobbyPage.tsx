@@ -6,14 +6,53 @@ import { BrandMark } from "../components/BrandMark"
 import { apiRequest, ApiError } from "../lib/api"
 import { getBabyCopy, getBabyTone } from "../lib/baby"
 import { formatDatePair } from "../lib/date"
-import type { PublicLobbyTrain, PublicVolunteerSignup } from "../lib/types"
+import type { PublicLobbyData, PublicLobbyTrain, PublicVolunteerSignup } from "../lib/types"
 import { readVolunteerProfile } from "../lib/volunteerProfile"
+
+function LobbyTrainCard({ train, showAction = true }: { train: PublicLobbyTrain; showAction?: boolean }) {
+  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
+  const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
+  const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
+  const isOpen = train.open_days > 0
+  const tone = getBabyTone(train.baby_type, train.is_twins)
+
+  let statusLabel = "ממשיכות להתפנק"
+  let bodyText = `כל הימים סגורים${endLabel ? ` · עד ${endLabel}` : ""}.`
+  if (train.stage === "recent") {
+    statusLabel = "פינקנו לאחרונה"
+    bodyText = `${train.assigned_days} פינוקים נסגרו${endLabel ? ` · הסתיים ב־${endLabel}` : ""}.`
+  } else if (isOpen) {
+    statusLabel = "פתוח להרשמה"
+    bodyText = `${train.open_days} ימים פנויים${nextOpenLabel ? ` · הקרוב ביותר ${nextOpenLabel}` : ""}`
+  }
+
+  return (
+    <article className={`lobby-card lobby-card--${tone}`}>
+      <div className="lobby-card__header">
+        <p className="eyebrow">מפנקות את {train.family_title}</p>
+        <span className={`status ${isOpen ? "status--open" : "status--completed"}`}>{statusLabel}</span>
+      </div>
+
+      <div className="lobby-card__body">
+        <h3>מזל טוב {babyCopy.blessing}</h3>
+        <p className="muted">{bodyText}</p>
+        <p className="muted">{formatDatePair(train.start_date).short}</p>
+      </div>
+
+      {showAction ? (
+        <Link className="button button--ghost" to={`/t/${train.public_token}`}>
+          {isOpen ? "להשתבץ" : "לצפייה בלוח"}
+        </Link>
+      ) : null}
+    </article>
+  )
+}
 
 export function PublicLobbyPage() {
   const [volunteerProfile] = useState(() => readVolunteerProfile())
   const lobbyQuery = useQuery({
     queryKey: ["public-lobby"],
-    queryFn: () => apiRequest<PublicLobbyTrain[]>("/api/public/lobby"),
+    queryFn: () => apiRequest<PublicLobbyData>("/api/public/lobby"),
   })
   const volunteerSignupsQuery = useQuery({
     queryKey: ["public-volunteer-signups", volunteerProfile.volunteerKey, volunteerProfile.phone],
@@ -27,7 +66,8 @@ export function PublicLobbyPage() {
       }),
     enabled: Boolean(volunteerProfile.volunteerKey || volunteerProfile.phone),
   })
-  const trains = lobbyQuery.data ?? []
+  const activeTrains = lobbyQuery.data?.active_trains ?? []
+  const recentTrains = lobbyQuery.data?.recent_trains ?? []
   const volunteerSignups = volunteerSignupsQuery.data ?? []
 
   return (
@@ -109,49 +149,12 @@ export function PublicLobbyPage() {
 
           {lobbyQuery.isLoading ? <p className="muted">טוען...</p> : null}
 
-          {trains.length ? (
+          {activeTrains.length ? (
             <div className="lobby-carousel">
               <div className="lobby-carousel__track">
-                {trains.map((train) => {
-                  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
-                  const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
-                  const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
-                  const isOpen = train.open_days > 0
-
-                  return (
-                    <article
-                      key={train.public_token}
-                      className={`lobby-card lobby-card--${getBabyTone(train.baby_type, train.is_twins)}`}
-                    >
-                      <div className="lobby-card__header">
-                        <p className="eyebrow">מפנקות את {train.family_title}</p>
-                        <span className={`status ${isOpen ? "status--open" : "status--completed"}`}>
-                          {isOpen ? "פתוח להרשמה" : "פעיל ומלא"}
-                        </span>
-                      </div>
-
-                      <div className="lobby-card__body">
-                        <h3>מזל טוב {babyCopy.blessing}</h3>
-                        {isOpen ? (
-                          <p className="muted">
-                            {train.open_days} ימים פנויים
-                            {nextOpenLabel ? ` · הקרוב ביותר ${nextOpenLabel}` : ""}
-                          </p>
-                        ) : (
-                          <p className="muted">
-                            מלא כרגע
-                            {endLabel ? ` · עד ${endLabel}` : ""}.
-                          </p>
-                        )}
-                        <p className="muted">{formatDatePair(train.start_date).short}</p>
-                      </div>
-
-                      <Link className="button button--ghost" to={`/t/${train.public_token}`}>
-                        {isOpen ? "להשתבץ" : "לצפייה בלוח"}
-                      </Link>
-                    </article>
-                  )
-                })}
+                {activeTrains.map((train) => (
+                  <LobbyTrainCard key={train.public_token} train={train} />
+                ))}
               </div>
             </div>
           ) : (
@@ -163,6 +166,26 @@ export function PublicLobbyPage() {
             </div>
           )}
         </section>
+
+        {recentTrains.length ? (
+          <section className="panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">פינקנו לאחרונה</p>
+                <h3>יולדות שסיימו ב־30 הימים האחרונים</h3>
+              </div>
+              <p className="muted">לתצוגה בלבד, בלי הרשמה</p>
+            </div>
+
+            <div className="lobby-carousel">
+              <div className="lobby-carousel__track">
+                {recentTrains.map((train) => (
+                  <LobbyTrainCard key={`recent-${train.public_token}`} train={train} showAction={false} />
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
       </main>
     </div>
   )
