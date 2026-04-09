@@ -190,11 +190,11 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
           <>
             <section className={`public-train-hero public-train-hero--${getBabyTone(trainQuery.data.baby_type, trainQuery.data.is_twins)}`}>
               <div className="public-train-hero__headline">
-                <BrandMark compact />
                 <div className="public-train-hero__copy">
                   <h1>{pageTitle}</h1>
                   <p>{pageSubtitle}</p>
                 </div>
+                <BrandMark compact />
               </div>
 
               <div className="public-train-hero__details">
