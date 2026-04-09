@@ -375,6 +375,10 @@ function getTrainCardTone(train: Pick<MealTrainSummary, "baby_type"> | Pick<Meal
   return train.baby_type ?? "neutral"
 }
 
+function getResolvedDays(totalDays: number, openDays: number) {
+  return Math.max(0, totalDays - openDays)
+}
+
 function ProgressDonut({
   assignedDays,
   totalDays,
@@ -853,10 +857,9 @@ export function AdminDashboardPage() {
   const babyCopy = getBabyCopy(selectedTrain?.baby_type)
   const activeTrains = sortTrainSummaries(trainsQuery.data?.filter((train) => !train.is_archived) ?? [])
   const archivedTrains = trainsQuery.data?.filter((train) => train.is_archived) ?? []
-  const totalTrackedDays =
-    (overviewQuery.data?.total_open_days ?? 0) + (overviewQuery.data?.total_assigned_days ?? 0)
-  const totalFillRate =
-    totalTrackedDays > 0 ? Math.round(((overviewQuery.data?.total_assigned_days ?? 0) / totalTrackedDays) * 100) : 0
+  const totalTrackedDays = activeTrains.reduce((total, train) => total + train.total_days, 0)
+  const totalResolvedDays = activeTrains.reduce((total, train) => total + getResolvedDays(train.total_days, train.open_days), 0)
+  const totalFillRate = totalTrackedDays > 0 ? Math.round((totalResolvedDays / totalTrackedDays) * 100) : 0
   const selectedTrainEndDate =
     selectedTrain?.days.reduce<string | null>(
       (latest, day) => (!latest || day.date > latest ? day.date : latest),
@@ -985,7 +988,7 @@ export function AdminDashboardPage() {
                           <span className={`status status--${train.status}`}>{getTrainStatusLabel(train.status)}</span>
                         </div>
                         <ProgressDonut
-                          assignedDays={train.assigned_days}
+                          assignedDays={getResolvedDays(train.total_days, train.open_days)}
                           totalDays={train.total_days}
                           compact
                           tone={getTrainTone(train)}
@@ -1029,7 +1032,12 @@ export function AdminDashboardPage() {
                             <strong>{train.family_title}</strong>
                             <span className="status status--completed">הסתיים</span>
                           </div>
-                          <ProgressDonut assignedDays={train.assigned_days} totalDays={train.total_days} compact tone="neutral" />
+                          <ProgressDonut
+                            assignedDays={getResolvedDays(train.total_days, train.open_days)}
+                            totalDays={train.total_days}
+                            compact
+                            tone="neutral"
+                          />
                         </div>
                         <p>
                           {train.mother_name || "ללא שם"} · {getBabyCopy(train.baby_type).shortBlessing}
@@ -1384,10 +1392,10 @@ export function AdminDashboardPage() {
                   <div>
                     <p className="eyebrow">מילוי כולל</p>
                     <strong className="stat-card__value">{totalFillRate}%</strong>
-                    <p className="muted">כמה מתוך כל הימים הפעילים כבר שובצו.</p>
+                    <p className="muted">כמה מתוך כל הימים הפעילים כבר טופלו או שכבר עברו.</p>
                   </div>
                   <ProgressDonut
-                    assignedDays={overviewQuery.data.total_assigned_days}
+                    assignedDays={totalResolvedDays}
                     totalDays={totalTrackedDays}
                     tone={overviewQuery.data.urgent_open_days > 0 ? "warning" : "success"}
                   />
