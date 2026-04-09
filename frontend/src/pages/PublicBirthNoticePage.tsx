@@ -9,6 +9,12 @@ import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
 import { getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
 import { getLocalTodayIso } from "../lib/date"
+import {
+  clampScheduleStartDate,
+  getEarliestScheduleStartDate,
+  getLatestScheduleStartDate,
+  getScheduleWindowError,
+} from "../lib/scheduleWindow"
 import type { BabyTone, BabyType, PublicBirthNoticeResponse } from "../lib/types"
 
 const birthNoticeSchema = z.object({
@@ -16,6 +22,7 @@ const birthNoticeSchema = z.object({
   mother_name: z.string().min(2, "צריך שם יולדת"),
   baby_type: z.enum(["boy", "girl"]).optional(),
   is_twins: z.boolean(),
+  birth_date: z.string().min(1, "צריך תאריך לידה"),
   start_date: z.string().min(1, "צריך תאריך התחלה"),
 }).superRefine((values, ctx) => {
   if (!values.is_twins && !values.baby_type) {
@@ -23,6 +30,15 @@ const birthNoticeSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["baby_type"],
       message: "צריך לבחור מה נולד",
+    })
+  }
+
+  const scheduleError = getScheduleWindowError(values.birth_date, values.start_date)
+  if (scheduleError) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["start_date"],
+      message: scheduleError,
     })
   }
 })
@@ -38,6 +54,7 @@ export function PublicBirthNoticePage() {
       mother_name: "",
       baby_type: undefined,
       is_twins: false,
+      birth_date: getLocalTodayIso(),
       start_date: getLocalTodayIso(),
     },
   })
@@ -55,6 +72,14 @@ export function PublicBirthNoticePage() {
     control: form.control,
     name: "is_twins",
   })
+  const birthDate = useWatch({
+    control: form.control,
+    name: "birth_date",
+  }) as string
+  const startDate = useWatch({
+    control: form.control,
+    name: "start_date",
+  }) as string
   const birthChoice = getBirthChoice(babyType, isTwins)
   const twinsChoice = getTwinsChoice(babyType, isTwins)
   const displayTone: BabyTone | null = isTwins && !babyType ? "mixed" : babyType ?? null
@@ -70,6 +95,17 @@ export function PublicBirthNoticePage() {
     form.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
     form.setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
   }
+
+  useEffect(() => {
+    if (!birthDate) {
+      return
+    }
+
+    const nextStartDate = clampScheduleStartDate(birthDate, startDate)
+    if (nextStartDate !== startDate) {
+      form.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+    }
+  }, [birthDate, form, startDate])
 
   const createMutation = useMutation({
     mutationFn: (values: BirthNoticeValues) =>
@@ -147,8 +183,21 @@ export function PublicBirthNoticePage() {
           </fieldset>
 
           <label className="field">
+            <span>תאריך הלידה</span>
+            <input type="date" max={getLocalTodayIso()} {...form.register("birth_date")} />
+            {form.formState.errors.birth_date ? (
+              <small>{form.formState.errors.birth_date.message}</small>
+            ) : null}
+          </label>
+
+          <label className="field">
             <span>ממתי לפתוח את הלוח</span>
-            <input type="date" {...form.register("start_date")} />
+            <input
+              type="date"
+              min={birthDate ? getEarliestScheduleStartDate(birthDate) : undefined}
+              max={birthDate ? getLatestScheduleStartDate(birthDate) : undefined}
+              {...form.register("start_date")}
+            />
             {form.formState.errors.start_date ? (
               <small>{form.formState.errors.start_date.message}</small>
             ) : null}

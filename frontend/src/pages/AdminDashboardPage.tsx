@@ -11,6 +11,12 @@ import { apiRequest, ApiError } from "../lib/api"
 import { useAuth } from "../lib/auth"
 import { getBabyCopy, getBabyTone, getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
 import { formatDatePair, getLocalTodayIso } from "../lib/date"
+import {
+  clampScheduleStartDate,
+  getEarliestScheduleStartDate,
+  getLatestScheduleStartDate,
+  getScheduleWindowError,
+} from "../lib/scheduleWindow"
 import type {
   AdminAccount,
   AdminOverview,
@@ -28,9 +34,19 @@ const createTrainSchema = z.object({
   contact_phone: z.string().optional(),
   baby_type: babyTypeSchema,
   is_twins: z.boolean(),
+  birth_date: z.string().min(1, "צריך תאריך לידה"),
   start_date: z.string().min(1, "צריך תאריך התחלה"),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
+}).superRefine((values, ctx) => {
+  const scheduleError = getScheduleWindowError(values.birth_date, values.start_date)
+  if (scheduleError) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["start_date"],
+      message: scheduleError,
+    })
+  }
 })
 
 const editTrainSchema = z.object({
@@ -41,6 +57,8 @@ const editTrainSchema = z.object({
   is_twins: z.boolean(),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
+  household_size: z.string().optional(),
+  children_ages: z.string().optional(),
   lobby_visible: z.boolean().optional(),
 })
 
@@ -470,6 +488,7 @@ function CalendarBreakdownChart({
 export function AdminDashboardPage() {
   const { token, logout } = useAuth()
   const queryClient = useQueryClient()
+  const todayIso = getLocalTodayIso()
   const [activeTab, setActiveTab] = useState<AdminTab>("cases")
   const [activeCaseTab, setActiveCaseTab] = useState<CaseDetailTab>("summary")
   const [selectedTrainId, setSelectedTrainId] = useState<number | null>(null)
@@ -488,7 +507,8 @@ export function AdminDashboardPage() {
       contact_phone: "",
       baby_type: "",
       is_twins: false,
-      start_date: new Date().toISOString().slice(0, 10),
+      birth_date: todayIso,
+      start_date: todayIso,
       default_delivery_time: "18:00",
       reminder_time: "09:00",
     },
@@ -619,6 +639,8 @@ export function AdminDashboardPage() {
       is_twins: train.is_twins,
       default_delivery_time: train.default_delivery_time,
       reminder_time: train.reminder_time,
+      household_size: train.intake_form?.household_size ?? "",
+      children_ages: train.intake_form?.children_ages ?? "",
     })
 
     addDayForm.reset({
@@ -664,7 +686,8 @@ export function AdminDashboardPage() {
         contact_phone: "",
         baby_type: "",
         is_twins: false,
-        start_date: new Date().toISOString().slice(0, 10),
+        birth_date: todayIso,
+        start_date: todayIso,
         default_delivery_time: "18:00",
         reminder_time: "09:00",
       })
@@ -876,6 +899,8 @@ export function AdminDashboardPage() {
     selectedTrain?.is_twins && !selectedTrain?.baby_type ? "mixed" : selectedTrain?.baby_type ?? null
   const createBabyType = createForm.watch("baby_type")
   const createIsTwins = createForm.watch("is_twins")
+  const createBirthDate = createForm.watch("birth_date")
+  const createStartDate = createForm.watch("start_date")
   const editBabyType = editForm.watch("baby_type")
   const editIsTwins = editForm.watch("is_twins")
   const createBirthChoice = getBirthChoice(createBabyType || null, createIsTwins)
@@ -976,6 +1001,17 @@ export function AdminDashboardPage() {
     editForm.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
     editForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
   }
+
+  useEffect(() => {
+    if (!createBirthDate) {
+      return
+    }
+
+    const nextStartDate = clampScheduleStartDate(createBirthDate, createStartDate)
+    if (nextStartDate !== createStartDate) {
+      createForm.setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+    }
+  }, [createBirthDate, createForm, createStartDate])
 
   return (
     <PageShell
@@ -1389,6 +1425,25 @@ export function AdminDashboardPage() {
                         </label>
                       </div>
 
+                      <div className="field-row">
+                        <label className="field">
+                          <span>נפשות</span>
+                          <input
+                            {...editForm.register("household_size")}
+                            disabled={!selectedTrain.intake_form}
+                            placeholder={selectedTrain.intake_form ? "" : "יתעדכן אחרי מילוי השאלון"}
+                          />
+                        </label>
+                        <label className="field">
+                          <span>גילאי הילדים</span>
+                          <input
+                            {...editForm.register("children_ages")}
+                            disabled={!selectedTrain.intake_form}
+                            placeholder={selectedTrain.intake_form ? "" : "יתעדכן אחרי מילוי השאלון"}
+                          />
+                        </label>
+                      </div>
+
                       <fieldset className="baby-type-picker">
                         <legend>מה נולד?</legend>
                         <div className="baby-type-picker__options baby-type-picker__options--triple">
@@ -1650,10 +1705,27 @@ export function AdminDashboardPage() {
                 ) : null}
               </fieldset>
 
-              <label className="field">
-                <span>תאריך התחלה</span>
-                <input type="date" {...createForm.register("start_date")} />
-              </label>
+              <div className="field-row">
+                <label className="field">
+                  <span>תאריך הלידה</span>
+                  <input type="date" max={todayIso} {...createForm.register("birth_date")} />
+                  {createForm.formState.errors.birth_date ? (
+                    <small>{createForm.formState.errors.birth_date.message}</small>
+                  ) : null}
+                </label>
+                <label className="field">
+                  <span>ממתי לפתוח את הלוח</span>
+                    <input
+                      type="date"
+                      min={createBirthDate ? getEarliestScheduleStartDate(createBirthDate) : undefined}
+                      max={createBirthDate ? getLatestScheduleStartDate(createBirthDate) : undefined}
+                      {...createForm.register("start_date")}
+                    />
+                  {createForm.formState.errors.start_date ? (
+                    <small>{createForm.formState.errors.start_date.message}</small>
+                  ) : null}
+                </label>
+              </div>
 
               <div className="field-row field-row--tight">
                 <label className="field">

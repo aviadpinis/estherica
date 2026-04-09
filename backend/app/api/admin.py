@@ -70,6 +70,7 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
         baby_type=train.baby_type.value if train.baby_type else None,
         is_twins=train.is_twins,
         status=train.status.value,
+        birth_date=train.birth_date or train.start_date,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -100,6 +101,7 @@ def _build_detail(train: MealTrain) -> MealTrainDetail:
         baby_type=train.baby_type.value if train.baby_type else None,
         is_twins=train.is_twins,
         status=train.status.value,
+        birth_date=train.birth_date or train.start_date,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -267,6 +269,7 @@ def create_meal_train(
         contact_phone=payload.contact_phone,
         baby_type=BabyType(payload.baby_type) if payload.baby_type else None,
         is_twins=payload.is_twins,
+        birth_date=payload.birth_date,
         start_date=payload.start_date,
         default_delivery_time=payload.default_delivery_time,
         reminder_time=payload.reminder_time,
@@ -317,6 +320,11 @@ def update_meal_train(
 
     if "lobby_visible" in updates:
         train.lobby_visible = updates["lobby_visible"]
+
+    if train.intake_form is not None:
+        for field in ("household_size", "children_ages"):
+            if field in updates:
+                setattr(train.intake_form, field, updates[field] or None)
 
     if any(field in updates for field in ("is_twins", "default_delivery_time")):
         sync_default_days(train, train.default_delivery_time)

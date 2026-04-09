@@ -195,6 +195,7 @@ def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeRe
         is_twins=train.is_twins,
         status=train.status.value,
         public_token=train.public_token,
+        birth_date=train.birth_date or train.start_date,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -220,6 +221,8 @@ def submit_intake_form(
         train.mother_name = payload.mother_name
     train.baby_type = BabyType(payload.baby_type) if payload.baby_type else None
     train.is_twins = payload.is_twins
+    train.birth_date = payload.birth_date
+    train.start_date = payload.start_date
     train.contact_phone = payload.contact_phone
     sync_default_days(train, payload.delivery_deadline or train.default_delivery_time)
 
@@ -289,6 +292,7 @@ def submit_intake_form(
         is_twins=train.is_twins,
         status=train.status.value,
         public_token=train.public_token,
+        birth_date=train.birth_date or train.start_date,
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -305,6 +309,7 @@ def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> P
         mother_name=train.mother_name,
         baby_type=train.baby_type.value if train.baby_type else None,
         is_twins=train.is_twins,
+        birth_date=train.birth_date or train.start_date,
         start_date=train.start_date,
         default_delivery_time=intake.delivery_deadline if intake and intake.delivery_deadline else train.default_delivery_time,
         reminder_time=train.reminder_time,
@@ -410,6 +415,7 @@ def create_birth_notice(
         mother_name=payload.mother_name,
         baby_type=baby_type,
         is_twins=payload.is_twins,
+        birth_date=payload.birth_date,
         start_date=payload.start_date,
         default_delivery_time=DEFAULT_DELIVERY_TIME,
         reminder_time=DEFAULT_REMINDER_TIME,

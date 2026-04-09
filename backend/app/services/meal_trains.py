@@ -11,6 +11,7 @@ DEFAULT_REMINDER_TIME = "09:00"
 TOKEN_ALPHABET = string.ascii_letters + string.digits
 DEFAULT_DURATION_DAYS = 14
 TWINS_DURATION_DAYS = 21
+MAX_SCHEDULE_START_OFFSET_DAYS = 8
 
 
 def generate_token(length: int = 12) -> str:
@@ -19,6 +20,23 @@ def generate_token(length: int = 12) -> str:
 
 def get_schedule_length(is_twins: bool) -> int:
     return TWINS_DURATION_DAYS if is_twins else DEFAULT_DURATION_DAYS
+
+
+def get_latest_schedule_start_date(birth_date: date) -> date:
+    return birth_date + timedelta(days=MAX_SCHEDULE_START_OFFSET_DAYS)
+
+
+def get_earliest_schedule_start_date(birth_date: date) -> date:
+    return birth_date + timedelta(days=1)
+
+
+def validate_schedule_window(birth_date: date, start_date: date) -> None:
+    earliest_start = get_earliest_schedule_start_date(birth_date)
+    latest_start = get_latest_schedule_start_date(birth_date)
+    if start_date < earliest_start or start_date > latest_start:
+        raise ValueError("תאריך פתיחת הלוח צריך להיות מהיום שאחרי הלידה ועד 8 ימים אחריה.")
+    if start_date.weekday() in (4, 5):
+        raise ValueError("לא ניתן לפתוח את הלוח בשישי או שבת.")
 
 
 def build_schedule_dates(start_date: date, is_twins: bool) -> list[date]:

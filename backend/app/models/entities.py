@@ -64,6 +64,7 @@ class MealTrain(Base):
         default=MealTrainStatus.draft,
         nullable=False,
     )
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     timezone: Mapped[str] = mapped_column(String(64), default="Asia/Jerusalem", nullable=False)
     default_delivery_time: Mapped[str] = mapped_column(String(5), nullable=False)

@@ -1,6 +1,8 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.services.meal_trains import validate_schedule_window
 
 
 class SignupResponse(BaseModel):
@@ -56,6 +58,7 @@ class MealTrainSummary(BaseModel):
     baby_type: str | None
     is_twins: bool
     status: str
+    birth_date: date
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -84,6 +87,7 @@ class MealTrainDetail(BaseModel):
     baby_type: str | None
     is_twins: bool
     status: str
+    birth_date: date
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -105,9 +109,15 @@ class MealTrainCreate(BaseModel):
     contact_phone: str | None = None
     baby_type: str | None = None
     is_twins: bool = False
+    birth_date: date
     start_date: date
     default_delivery_time: str
     reminder_time: str
+
+    @model_validator(mode="after")
+    def validate_schedule_dates(self) -> "MealTrainCreate":
+        validate_schedule_window(self.birth_date, self.start_date)
+        return self
 
 
 class MealTrainUpdate(BaseModel):
@@ -118,6 +128,8 @@ class MealTrainUpdate(BaseModel):
     is_twins: bool | None = None
     default_delivery_time: str | None = None
     reminder_time: str | None = None
+    household_size: str | None = None
+    children_ages: str | None = None
     gift_delivered: bool | None = None
     lobby_visible: bool | None = None
     status: str | None = None
@@ -146,6 +158,8 @@ class IntakeSubmission(BaseModel):
     mother_name: str | None = None
     baby_type: str | None = None
     is_twins: bool = False
+    birth_date: date
+    start_date: date
     address: str
     household_size: str = Field(min_length=1)
     children_ages: str = Field(min_length=1)
@@ -166,6 +180,11 @@ class IntakeSubmission(BaseModel):
             raise ValueError("חובה למלא")
         return cleaned
 
+    @model_validator(mode="after")
+    def validate_schedule_dates(self) -> "IntakeSubmission":
+        validate_schedule_window(self.birth_date, self.start_date)
+        return self
+
 
 class PublicIntakeResponse(BaseModel):
     family_title: str
@@ -175,6 +194,7 @@ class PublicIntakeResponse(BaseModel):
     is_twins: bool
     status: str
     public_token: str
+    birth_date: date
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -228,6 +248,7 @@ class PublicMealTrainResponse(BaseModel):
     mother_name: str | None
     baby_type: str | None
     is_twins: bool
+    birth_date: date
     start_date: date
     default_delivery_time: str
     reminder_time: str
@@ -301,7 +322,13 @@ class PublicBirthNoticeCreate(BaseModel):
     mother_name: str | None = None
     baby_type: str | None = None
     is_twins: bool = False
+    birth_date: date
     start_date: date
+
+    @model_validator(mode="after")
+    def validate_schedule_dates(self) -> "PublicBirthNoticeCreate":
+        validate_schedule_window(self.birth_date, self.start_date)
+        return self
 
 
 class PublicBirthNoticeCreateResponse(BaseModel):

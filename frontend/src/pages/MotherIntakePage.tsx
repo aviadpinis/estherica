@@ -9,6 +9,13 @@ import { MealCalendar } from "../components/MealCalendar"
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
 import { getBabyCopy, getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
+import { getLocalTodayIso } from "../lib/date"
+import {
+  clampScheduleStartDate,
+  getEarliestScheduleStartDate,
+  getLatestScheduleStartDate,
+  getScheduleWindowError,
+} from "../lib/scheduleWindow"
 import type { BabyTone, MealDay, PublicIntakeData } from "../lib/types"
 
 type IntakeTab = "details" | "calendar"
@@ -19,6 +26,8 @@ const intakeSchema = z.object({
   baby_type: z.enum(["boy", "girl"]).optional(),
   is_twins: z.boolean(),
   mother_name: z.string().optional(),
+  birth_date: z.string().min(1, "צריך תאריך לידה"),
+  start_date: z.string().min(1, "צריך לבחור ממתי לפתוח את הלוח"),
   address: z.string().min(2, "כתובת חובה"),
   household_size: z.string().trim().min(1, "צריך למלא נפשות"),
   children_ages: z.string().trim().min(1, "צריך למלא גילאי הילדים"),
@@ -42,6 +51,15 @@ const intakeSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["baby_type"],
       message: "צריך לבחור מה נולד",
+    })
+  }
+
+  const scheduleError = getScheduleWindowError(values.birth_date, values.start_date)
+  if (scheduleError) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["start_date"],
+      message: scheduleError,
     })
   }
 })
@@ -130,6 +148,8 @@ export function MotherIntakePage() {
       baby_type: undefined,
       is_twins: false,
       mother_name: "",
+      birth_date: "",
+      start_date: "",
       address: "",
       household_size: "",
       children_ages: "",
@@ -158,6 +178,8 @@ export function MotherIntakePage() {
       baby_type: intakeQuery.data.baby_type ?? undefined,
       is_twins: intakeQuery.data.is_twins ?? false,
       mother_name: intakeQuery.data.mother_name ?? "",
+      birth_date: intakeQuery.data.birth_date,
+      start_date: intakeQuery.data.start_date,
       address: "",
       household_size: "",
       children_ages: "",
@@ -190,6 +212,9 @@ export function MotherIntakePage() {
 
   const babyType = watch("baby_type")
   const isTwins = watch("is_twins")
+  const birthDate = watch("birth_date")
+  const startDate = watch("start_date")
+  const todayIso = getLocalTodayIso()
   const birthChoice = getBirthChoice(babyType, isTwins)
   const twinsChoice = getTwinsChoice(babyType, isTwins)
   const displayTone: BabyTone | null = isTwins && !babyType ? "mixed" : babyType ?? null
@@ -197,7 +222,7 @@ export function MotherIntakePage() {
   const dayChoices = watch("day_choices") ?? []
   const displayDays = intakeQuery.data
     ? buildEditableDays(
-        intakeQuery.data.start_date,
+        startDate || intakeQuery.data.start_date,
         intakeQuery.data.days,
         watch("delivery_deadline") || intakeQuery.data.default_delivery_time,
         isTwins,
@@ -223,6 +248,17 @@ export function MotherIntakePage() {
       setValue("day_choices", nextChoices, { shouldValidate: true })
     }
   }, [displayDays, getValues, setValue])
+
+  useEffect(() => {
+    if (!birthDate) {
+      return
+    }
+
+    const nextStartDate = clampScheduleStartDate(birthDate, startDate)
+    if (nextStartDate !== startDate) {
+      setValue("start_date", nextStartDate, { shouldDirty: true, shouldValidate: true })
+    }
+  }, [birthDate, setValue, startDate])
 
   const selectionByDate = Object.fromEntries(dayChoices.map((choice) => [choice.date, choice.needed]))
   const selectionMap = Object.fromEntries(displayDays.map((day) => [day.id, selectionByDate[day.date] ?? true]))
@@ -369,6 +405,23 @@ export function MotherIntakePage() {
                   <span>שם היולדת</span>
                   <input {...register("mother_name")} />
                 </label>
+                <div className="field-row field-row--keep">
+                  <label className="field">
+                    <span>תאריך הלידה</span>
+                    <input type="date" max={todayIso} {...register("birth_date")} />
+                    {errors.birth_date ? <small>{errors.birth_date.message}</small> : null}
+                  </label>
+                  <label className="field">
+                    <span>ממתי לפתוח את הלוח</span>
+                    <input
+                      type="date"
+                      min={birthDate ? getEarliestScheduleStartDate(birthDate) : undefined}
+                      max={birthDate ? getLatestScheduleStartDate(birthDate) : undefined}
+                      {...register("start_date")}
+                    />
+                    {errors.start_date ? <small>{errors.start_date.message}</small> : null}
+                  </label>
+                </div>
                 <label className="field field--full">
                   <span>כתובת</span>
                   <input {...register("address")} />

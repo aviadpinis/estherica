@@ -48,6 +48,7 @@ export interface MealTrainSummary {
   baby_type: BabyType | null
   is_twins: boolean
   status: MealTrainStatus
+  birth_date: string
   start_date: string
   default_delivery_time: string
   reminder_time: string
@@ -76,6 +77,7 @@ export interface MealTrainDetail {
   baby_type: BabyType | null
   is_twins: boolean
   status: MealTrainStatus
+  birth_date: string
   start_date: string
   default_delivery_time: string
   reminder_time: string
@@ -99,6 +101,7 @@ export interface PublicIntakeData {
   is_twins: boolean
   status: MealTrainStatus
   public_token: string
+  birth_date: string
   start_date: string
   default_delivery_time: string
   reminder_time: string
@@ -110,6 +113,7 @@ export interface PublicMealTrainData {
   mother_name: string | null
   baby_type: BabyType | null
   is_twins: boolean
+  birth_date: string
   start_date: string
   default_delivery_time: string
   reminder_time: string

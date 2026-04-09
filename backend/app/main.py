@@ -38,6 +38,19 @@ def ensure_schema() -> None:
         if "is_twins" not in columns:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE meal_trains ADD COLUMN is_twins BOOLEAN DEFAULT FALSE NOT NULL"))
+        if "birth_date" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE meal_trains ADD COLUMN birth_date DATE"))
+                if engine.dialect.name == "sqlite":
+                    connection.execute(text("UPDATE meal_trains SET birth_date = date(start_date, '-1 day') WHERE birth_date IS NULL"))
+                else:
+                    connection.execute(text("UPDATE meal_trains SET birth_date = start_date - INTERVAL '1 day' WHERE birth_date IS NULL"))
+        else:
+            with engine.begin() as connection:
+                if engine.dialect.name == "sqlite":
+                    connection.execute(text("UPDATE meal_trains SET birth_date = date(start_date, '-1 day') WHERE birth_date IS NULL"))
+                else:
+                    connection.execute(text("UPDATE meal_trains SET birth_date = start_date - INTERVAL '1 day' WHERE birth_date IS NULL"))
 
     if "signups" in inspector.get_table_names():
         columns = {column["name"] for column in inspector.get_columns("signups")}
