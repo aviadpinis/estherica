@@ -10,6 +10,7 @@ interface MealCalendarProps {
   babyType: BabyTone | null
   mode: CalendarMode
   selectedDayId?: number | null
+  ownedDayIds?: number[]
   selectionMap?: Record<number, boolean>
   onToggleNeeded?: (day: MealDay) => void
   onSelectDay?: (day: MealDay) => void
@@ -102,6 +103,7 @@ export function MealCalendar({
   babyType,
   mode,
   selectedDayId = null,
+  ownedDayIds = [],
   selectionMap,
   onToggleNeeded,
   onSelectDay,
@@ -125,6 +127,7 @@ export function MealCalendar({
       .join(" ")
 
     const volunteerName = mode === "admin" ? cell.day?.signup?.volunteer_name : null
+    const isOwnedByCurrentVolunteer = mode === "public" && Boolean(cell.day && ownedDayIds.includes(cell.day.id))
     const interactive =
       cell.day &&
       !cell.isWeekend &&
@@ -155,6 +158,7 @@ export function MealCalendar({
           {state === "assigned" ? <span>תפוס</span> : null}
         </div>
         {volunteerName ? <div className="calendar-card__signup">{volunteerName}</div> : null}
+        {isOwnedByCurrentVolunteer ? <div className="calendar-card__signup">ההשתבצות שלך</div> : null}
       </>
     )
 

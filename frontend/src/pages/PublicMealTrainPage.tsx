@@ -170,9 +170,8 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
 
   return (
     <PageShell
-      title={pageTitle}
-      subtitle={pageSubtitle}
       tone={displayTone}
+      hideIntro
     >
       <section className="panel panel--form">
         {trainQuery.isLoading ? <p className="muted">טוען את הלוח...</p> : null}
@@ -187,12 +186,12 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
 
         {trainQuery.data ? (
           <>
-            <div className="community-header community-header--compact">
-              <div>
-                <p className="eyebrow">{pageTitle}</p>
-                <h3>{pageSubtitle}</h3>
+            <section className={`public-train-summary public-train-summary--${getBabyTone(trainQuery.data.baby_type, trainQuery.data.is_twins)}`}>
+              <div className="public-train-summary__header">
+                <p className="eyebrow">לוח ההשתבצות</p>
+                <h2>{pageTitle} · {pageSubtitle}</h2>
               </div>
-              <div className="detail-stack detail-stack--compact">
+              <div className="detail-stack detail-stack--compact public-train-summary__details">
                 <p>
                   <strong>כתובת:</strong> {trainQuery.data.address || "תעודכן במידת הצורך"}
                 </p>
@@ -215,45 +214,34 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                   </p>
                 ) : null}
               </div>
-            </div>
+            </section>
 
-            {ownSignups.length ? (
-              <section className="panel panel--nested">
-                <div className="section-heading">
-                  <div>
-                    <p className="eyebrow">ההשתבצויות שלי</p>
-                    <h4>את כבר רשומה לימים הבאים</h4>
-                  </div>
+            <section className="panel panel--nested calendar-panel">
+              <div className="section-heading section-heading--calendar">
+                <div>
+                  <p className="eyebrow">לוח ההשתבצות</p>
+                  <h4>גררי ימינה ושמאלה כדי לראות את כל הימים</h4>
                 </div>
-
-                <div className="registration-list">
-                  {ownSignups.map((day) => (
-                    <article key={day.id} className="registration-card">
-                      <div>
-                        <strong>{formatDatePair(day.date).hebrew}</strong>
-                        <p className="muted">הבאת ארוחה עד {day.delivery_deadline}</p>
-                      </div>
-                      <button
-                        className="button button--ghost"
-                        type="button"
-                        disabled={cancelMutation.isPending}
-                        onClick={() => cancelMutation.mutate(day.id)}
-                      >
-                        {cancelMutation.isPending ? "מבטלת..." : "ביטול הרשמה"}
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
-            <section className="calendar-section">
+                <p className="muted">
+                  {ownSignups.length
+                    ? `יש לך ${ownSignups.length} השתבצויות פעילות בלוח`
+                    : hasOpenDays
+                      ? "לחצי על יום פנוי כדי להשתבץ"
+                      : "כרגע אין ימים פנויים בלוח"}
+                </p>
+              </div>
+              <div className="calendar-scroll-hint" aria-hidden="true">
+                <span>→</span>
+                <span>הלוח נגרר לצדדים</span>
+                <span>←</span>
+              </div>
               <MealCalendar
                 startDate={trainQuery.data.start_date}
                 days={trainQuery.data.days}
                 babyType={displayTone}
                 mode="public"
                 selectedDayId={selectedDayId}
+                ownedDayIds={ownSignups.map((day) => day.id)}
                 onSelectDay={(day) => {
                   if (day.status === "open") {
                     setSelectedDayId(day.id)
@@ -262,6 +250,22 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                   }
                 }}
               />
+
+              {ownSignups.length ? (
+                <div className="calendar-panel__actions">
+                  {ownSignups.map((day) => (
+                    <button
+                      key={day.id}
+                      className="button button--ghost"
+                      type="button"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => cancelMutation.mutate(day.id)}
+                    >
+                      ביטול הרשמה ל־{formatDatePair(day.date).short}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </section>
 
             {completedSignup ? (

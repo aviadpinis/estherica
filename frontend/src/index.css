@@ -1385,6 +1385,76 @@ button.calendar-card {
   margin-bottom: 12px;
 }
 
+.public-train-summary {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border-radius: 28px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.public-train-summary__header {
+  display: grid;
+  gap: 6px;
+}
+
+.public-train-summary__header h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+}
+
+.public-train-summary__details {
+  gap: 8px;
+}
+
+.public-train-summary--boy {
+  background: linear-gradient(180deg, rgba(234, 244, 255, 0.98), rgba(220, 236, 250, 0.94));
+}
+
+.public-train-summary--girl {
+  background: linear-gradient(180deg, rgba(255, 239, 245, 0.98), rgba(250, 224, 235, 0.94));
+}
+
+.public-train-summary--mixed {
+  background: linear-gradient(135deg, rgba(234, 244, 255, 0.98), rgba(255, 236, 244, 0.94));
+}
+
+.public-train-summary--neutral {
+  background: linear-gradient(180deg, rgba(250, 243, 236, 0.98), rgba(238, 227, 214, 0.94));
+}
+
+.calendar-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.section-heading--calendar {
+  margin-bottom: 0;
+}
+
+.calendar-scroll-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px dashed rgba(23, 18, 15, 0.16);
+  color: var(--muted);
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.calendar-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .lobby-carousel {
   position: relative;
   overflow-x: auto;
@@ -1540,6 +1610,14 @@ button.calendar-card {
   .community-header {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+
+  .public-train-summary {
+    padding: 18px;
+  }
+
+  .calendar-scroll-hint {
+    width: 100%;
   }
 
   .admin-main__header,
