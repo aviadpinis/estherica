@@ -3,14 +3,14 @@ import type { ReactNode } from "react"
 
 import { BrandMark } from "./BrandMark"
 import { getBabyTone } from "../lib/baby"
-import type { BabyType } from "../lib/types"
+import type { BabyTone } from "../lib/types"
 
 interface PageShellProps {
   children: ReactNode
   title?: string
   subtitle?: string
   actions?: ReactNode
-  tone?: BabyType | null
+  tone?: BabyTone | null
   eyebrow?: string
   hideIntro?: boolean
 }

@@ -3,20 +3,28 @@ import { useMutation } from "@tanstack/react-query"
 import { useForm, useWatch } from "react-hook-form"
 import { Link, useNavigate } from "react-router-dom"
 import { z } from "zod"
+import { useEffect } from "react"
 
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
+import { getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
 import { getLocalTodayIso } from "../lib/date"
-import type { BabyType, PublicBirthNoticeResponse } from "../lib/types"
+import type { BabyTone, BabyType, PublicBirthNoticeResponse } from "../lib/types"
 
 const birthNoticeSchema = z.object({
   family_name: z.string().min(2, "צריך שם משפחה"),
   mother_name: z.string().min(2, "צריך שם יולדת"),
-  baby_type: z.enum(["boy", "girl"], {
-    error: "צריך לבחור מה נולד",
-  }),
+  baby_type: z.enum(["boy", "girl"]).optional(),
   is_twins: z.boolean(),
   start_date: z.string().min(1, "צריך תאריך התחלה"),
+}).superRefine((values, ctx) => {
+  if (!values.is_twins && !values.baby_type) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["baby_type"],
+      message: "צריך לבחור מה נולד",
+    })
+  }
 })
 
 type BirthNoticeValues = z.infer<typeof birthNoticeSchema>
@@ -34,10 +42,34 @@ export function PublicBirthNoticePage() {
     },
   })
 
+  useEffect(() => {
+    form.register("baby_type")
+    form.register("is_twins")
+  }, [form])
+
   const babyType = useWatch({
     control: form.control,
     name: "baby_type",
   }) as BabyType | undefined
+  const isTwins = useWatch({
+    control: form.control,
+    name: "is_twins",
+  })
+  const birthChoice = getBirthChoice(babyType, isTwins)
+  const twinsChoice = getTwinsChoice(babyType, isTwins)
+  const displayTone: BabyTone | null = isTwins && !babyType ? "mixed" : babyType ?? null
+
+  function handleBirthChoice(choice: BirthChoice) {
+    const next = resolveBirthSelection(choice, twinsChoice)
+    form.setValue("is_twins", next.isTwins, { shouldDirty: true, shouldValidate: true })
+    form.setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleTwinsChoice(choice: TwinsChoice) {
+    const next = resolveBirthSelection("twins", choice)
+    form.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
+    form.setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
+  }
 
   const createMutation = useMutation({
     mutationFn: (values: BirthNoticeValues) =>
@@ -54,7 +86,7 @@ export function PublicBirthNoticePage() {
     <PageShell
       title="ילדתי"
       subtitle="מלאי כמה פרטים קצרים, ומיד נפתח לך טופס היולדת המלא בלי לחכות לקישור מהמנהלת."
-      tone={babyType ?? null}
+      tone={displayTone}
       actions={
         <Link className="button button--ghost" to="/">
           חזרה ללובי
@@ -81,24 +113,38 @@ export function PublicBirthNoticePage() {
 
           <fieldset className="baby-type-picker">
             <legend>מה נולד?</legend>
-            <div className="baby-type-picker__options">
-              <label className={`baby-type-option ${babyType === "boy" ? "baby-type-option--selected" : ""}`}>
-                <input type="radio" value="boy" {...form.register("baby_type")} />
+            <div className="baby-type-picker__options baby-type-picker__options--triple">
+              <label className={`baby-type-option ${birthChoice === "boy" ? "baby-type-option--selected" : ""}`}>
+                <input type="radio" checked={birthChoice === "boy"} onChange={() => handleBirthChoice("boy")} />
                 <span>בן</span>
               </label>
-              <label className={`baby-type-option ${babyType === "girl" ? "baby-type-option--selected" : ""}`}>
-                <input type="radio" value="girl" {...form.register("baby_type")} />
+              <label className={`baby-type-option ${birthChoice === "girl" ? "baby-type-option--selected" : ""}`}>
+                <input type="radio" checked={birthChoice === "girl"} onChange={() => handleBirthChoice("girl")} />
                 <span>בת</span>
+              </label>
+              <label className={`baby-type-option ${birthChoice === "twins" ? "baby-type-option--selected" : ""}`}>
+                <input type="radio" checked={birthChoice === "twins"} onChange={() => handleBirthChoice("twins")} />
+                <span>תאומים</span>
               </label>
             </div>
             {form.formState.errors.baby_type ? <small>{form.formState.errors.baby_type.message}</small> : null}
+            {birthChoice === "twins" ? (
+              <div className="baby-type-picker__options baby-type-picker__options--triple">
+                <label className={`baby-type-option ${twinsChoice === "boys" ? "baby-type-option--selected" : ""}`}>
+                  <input type="radio" checked={twinsChoice === "boys"} onChange={() => handleTwinsChoice("boys")} />
+                  <span>בנים</span>
+                </label>
+                <label className={`baby-type-option ${twinsChoice === "girls" ? "baby-type-option--selected" : ""}`}>
+                  <input type="radio" checked={twinsChoice === "girls"} onChange={() => handleTwinsChoice("girls")} />
+                  <span>בנות</span>
+                </label>
+                <label className={`baby-type-option ${twinsChoice === "mixed" ? "baby-type-option--selected" : ""}`}>
+                  <input type="radio" checked={twinsChoice === "mixed"} onChange={() => handleTwinsChoice("mixed")} />
+                  <span>בן ובת</span>
+                </label>
+              </div>
+            ) : null}
           </fieldset>
-
-          <label className="checkbox-field">
-            <input type="checkbox" {...form.register("is_twins")} />
-            <span>מדובר בתאומים / תאומות</span>
-            <small>במקרה כזה המערכת תפתח אוטומטית לוח ל־3 שבועות.</small>
-          </label>
 
           <label className="field">
             <span>ממתי לפתוח את הלוח</span>

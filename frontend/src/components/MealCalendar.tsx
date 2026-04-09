@@ -1,13 +1,13 @@
 import { formatDatePair, formatWeekdayShort, getLocalTodayIso } from "../lib/date"
 import { getBabyTone } from "../lib/baby"
-import type { BabyType, MealDay } from "../lib/types"
+import type { BabyTone, MealDay } from "../lib/types"
 
 type CalendarMode = "intake" | "admin" | "public"
 
 interface MealCalendarProps {
   startDate: string
   days: MealDay[]
-  babyType: BabyType | null
+  babyType: BabyTone | null
   mode: CalendarMode
   selectedDayId?: number | null
   selectionMap?: Record<number, boolean>

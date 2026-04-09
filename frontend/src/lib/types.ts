@@ -1,4 +1,5 @@
 export type BabyType = "boy" | "girl"
+export type BabyTone = BabyType | "mixed"
 export type MealTrainStatus = "draft" | "published" | "completed"
 export type MealDayStatus = "open" | "assigned" | "not_needed"
 
@@ -145,6 +146,7 @@ export interface PublicLobbyTrain {
 export interface PublicVolunteerSignup {
   family_title: string
   baby_type: BabyType | null
+  is_twins: boolean
   public_token: string
   date: string
   delivery_deadline: string

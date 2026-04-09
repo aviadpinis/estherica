@@ -4,7 +4,7 @@ import { Link } from "react-router-dom"
 
 import { BrandMark } from "../components/BrandMark"
 import { apiRequest, ApiError } from "../lib/api"
-import { getBabyCopy } from "../lib/baby"
+import { getBabyCopy, getBabyTone } from "../lib/baby"
 import { formatDatePair } from "../lib/date"
 import type { PublicLobbyTrain, PublicVolunteerSignup } from "../lib/types"
 import { readVolunteerProfile } from "../lib/volunteerProfile"
@@ -65,7 +65,7 @@ export function PublicLobbyPage() {
             <div className="section-heading">
               <div>
                 <p className="eyebrow">הפינוקים שלי</p>
-                <h3>הפינוקים שאני נדרשת לפנק</h3>
+                <h3>היולדות שהשתבצתי אליהן</h3>
               </div>
               <p className="muted">{volunteerSignups.length} פינוק{volunteerSignups.length > 1 ? "ים" : ""} קרובים</p>
             </div>
@@ -75,7 +75,7 @@ export function PublicLobbyPage() {
                 {volunteerSignups.map((signup) => (
                   <article
                     key={`${signup.public_token}-${signup.date}-${signup.delivery_deadline}`}
-                    className={`lobby-card lobby-card--${signup.baby_type ?? "neutral"} lobby-card--assignment`}
+                    className={`lobby-card lobby-card--${getBabyTone(signup.baby_type, signup.is_twins)} lobby-card--assignment`}
                   >
                     <div className="lobby-card__header">
                       <p className="eyebrow">מפנקות את {signup.family_title}</p>
@@ -121,7 +121,7 @@ export function PublicLobbyPage() {
                   return (
                     <article
                       key={train.public_token}
-                      className={`lobby-card lobby-card--${train.baby_type ?? "neutral"}`}
+                      className={`lobby-card lobby-card--${getBabyTone(train.baby_type, train.is_twins)}`}
                     >
                       <div className="lobby-card__header">
                         <p className="eyebrow">מפנקות את {train.family_title}</p>

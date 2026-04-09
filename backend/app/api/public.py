@@ -168,10 +168,12 @@ def submit_intake_form(
 ) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
 
+    if not payload.is_twins and not payload.baby_type:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="צריך לבחור מה נולד.")
+
     if payload.mother_name:
         train.mother_name = payload.mother_name
-    if payload.baby_type:
-        train.baby_type = BabyType(payload.baby_type)
+    train.baby_type = BabyType(payload.baby_type) if payload.baby_type else None
     train.is_twins = payload.is_twins
     train.contact_phone = payload.contact_phone
     sync_default_days(train, payload.delivery_deadline or train.default_delivery_time)
@@ -310,6 +312,7 @@ def get_volunteer_signups(
         PublicVolunteerSignupResponse(
             family_title=signup.meal_day.meal_train.family_title,
             baby_type=signup.meal_day.meal_train.baby_type.value if signup.meal_day.meal_train.baby_type else None,
+            is_twins=signup.meal_day.meal_train.is_twins,
             public_token=signup.meal_day.meal_train.public_token,
             date=signup.meal_day.date,
             delivery_deadline=signup.meal_day.delivery_deadline,
@@ -324,8 +327,11 @@ def create_birth_notice(
     payload: PublicBirthNoticeCreate,
     db: Session = Depends(get_db),
 ) -> PublicBirthNoticeCreateResponse:
+    if not payload.is_twins and not payload.baby_type:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid baby type.")
+
     try:
-        baby_type = BabyType(payload.baby_type)
+        baby_type = BabyType(payload.baby_type) if payload.baby_type else None
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid baby type.") from exc
 

@@ -9,12 +9,12 @@ import { MealCalendar } from "../components/MealCalendar"
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
 import { useAuth } from "../lib/auth"
-import { getBabyCopy } from "../lib/baby"
+import { getBabyCopy, getBabyTone, getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
 import { formatDatePair, getLocalTodayIso } from "../lib/date"
 import type {
   AdminAccount,
   AdminOverview,
-  BabyType,
+  BabyTone,
   MealDay,
   MealTrainDetail,
   MealTrainSummary,
@@ -373,8 +373,12 @@ function sortTrainSummaries(trains: MealTrainSummary[]) {
   })
 }
 
-function getTrainCardTone(train: Pick<MealTrainSummary, "baby_type"> | Pick<MealTrainDetail, "baby_type">) {
-  return train.baby_type ?? "neutral"
+function getTrainCardTone(
+  train:
+    | Pick<MealTrainSummary, "baby_type" | "is_twins">
+    | Pick<MealTrainDetail, "baby_type" | "is_twins">,
+) {
+  return getBabyTone(train.baby_type ?? null, train.is_twins)
 }
 
 function getResolvedDays(totalDays: number, openDays: number) {
@@ -520,6 +524,13 @@ export function AdminDashboardPage() {
       password: "",
     },
   })
+
+  useEffect(() => {
+    createForm.register("baby_type")
+    createForm.register("is_twins")
+    editForm.register("baby_type")
+    editForm.register("is_twins")
+  }, [createForm, editForm])
 
   const trainsQuery = useQuery({
     queryKey: ["meal-trains"],
@@ -861,6 +872,16 @@ export function AdminDashboardPage() {
   const selectedDraft = selectedDay ? dayDrafts[selectedDay.id] : null
   const selectedTrainSummary = trainsQuery.data?.find((train) => train.id === selectedTrainId) ?? null
   const babyCopy = getBabyCopy(selectedTrain?.baby_type, selectedTrain?.is_twins)
+  const selectedTrainTone: BabyTone | null =
+    selectedTrain?.is_twins && !selectedTrain?.baby_type ? "mixed" : selectedTrain?.baby_type ?? null
+  const createBabyType = createForm.watch("baby_type")
+  const createIsTwins = createForm.watch("is_twins")
+  const editBabyType = editForm.watch("baby_type")
+  const editIsTwins = editForm.watch("is_twins")
+  const createBirthChoice = getBirthChoice(createBabyType || null, createIsTwins)
+  const editBirthChoice = getBirthChoice(editBabyType || null, editIsTwins)
+  const createTwinsChoice = getTwinsChoice(createBabyType || null, createIsTwins)
+  const editTwinsChoice = getTwinsChoice(editBabyType || null, editIsTwins)
   const activeTrains = sortTrainSummaries(trainsQuery.data?.filter((train) => !train.is_archived) ?? [])
   const archivedTrains = trainsQuery.data?.filter((train) => train.is_archived) ?? []
   const totalTrackedDays = activeTrains.reduce((total, train) => total + train.total_days, 0)
@@ -932,10 +953,34 @@ export function AdminDashboardPage() {
         }[confirmAction]
       : null
 
+  function handleCreateBirthChoice(choice: BirthChoice) {
+    const next = resolveBirthSelection(choice, createTwinsChoice)
+    createForm.setValue("is_twins", next.isTwins, { shouldDirty: true, shouldValidate: true })
+    createForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleCreateTwinsChoice(choice: TwinsChoice) {
+    const next = resolveBirthSelection("twins", choice)
+    createForm.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
+    createForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleEditBirthChoice(choice: BirthChoice) {
+    const next = resolveBirthSelection(choice, editTwinsChoice)
+    editForm.setValue("is_twins", next.isTwins, { shouldDirty: true, shouldValidate: true })
+    editForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleEditTwinsChoice(choice: TwinsChoice) {
+    const next = resolveBirthSelection("twins", choice)
+    editForm.setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
+    editForm.setValue("baby_type", next.babyType ?? "", { shouldDirty: true, shouldValidate: true })
+  }
+
   return (
     <PageShell
       hideIntro
-      tone={selectedTrain?.baby_type ?? null}
+      tone={selectedTrainTone}
       actions={
         <div className="toolbar-actions">
           {notificationPermission !== "unsupported" ? (
@@ -1295,7 +1340,7 @@ export function AdminDashboardPage() {
                     <MealCalendar
                       startDate={selectedTrain.start_date}
                       days={selectedTrain.days}
-                      babyType={selectedTrain.baby_type as BabyType | null}
+                      babyType={selectedTrainTone}
                       mode="admin"
                       selectedDayId={selectedDayId}
                       onSelectDay={(day) => {
@@ -1338,22 +1383,39 @@ export function AdminDashboardPage() {
                         </label>
                       </div>
 
-                      <div className="field-row">
-                        <label className="field">
-                          <span>מה נולד</span>
-                          <select {...editForm.register("baby_type")}>
-                            <option value="">לא נבחר</option>
-                            <option value="boy">בן</option>
-                            <option value="girl">בת</option>
-                          </select>
-                        </label>
-                      </div>
-
-                      <label className="checkbox-field">
-                        <input type="checkbox" {...editForm.register("is_twins")} />
-                        <span>מדובר בתאומים / תאומות</span>
-                        <small>המערכת תפתח אוטומטית לוח ל־3 שבועות.</small>
-                      </label>
+                      <fieldset className="baby-type-picker">
+                        <legend>מה נולד?</legend>
+                        <div className="baby-type-picker__options baby-type-picker__options--triple">
+                          <label className={`baby-type-option ${editBirthChoice === "boy" ? "baby-type-option--selected" : ""}`}>
+                            <input type="radio" checked={editBirthChoice === "boy"} onChange={() => handleEditBirthChoice("boy")} />
+                            <span>בן</span>
+                          </label>
+                          <label className={`baby-type-option ${editBirthChoice === "girl" ? "baby-type-option--selected" : ""}`}>
+                            <input type="radio" checked={editBirthChoice === "girl"} onChange={() => handleEditBirthChoice("girl")} />
+                            <span>בת</span>
+                          </label>
+                          <label className={`baby-type-option ${editBirthChoice === "twins" ? "baby-type-option--selected" : ""}`}>
+                            <input type="radio" checked={editBirthChoice === "twins"} onChange={() => handleEditBirthChoice("twins")} />
+                            <span>תאומים</span>
+                          </label>
+                        </div>
+                        {editBirthChoice === "twins" ? (
+                          <div className="baby-type-picker__options baby-type-picker__options--triple">
+                            <label className={`baby-type-option ${editTwinsChoice === "boys" ? "baby-type-option--selected" : ""}`}>
+                              <input type="radio" checked={editTwinsChoice === "boys"} onChange={() => handleEditTwinsChoice("boys")} />
+                              <span>בנים</span>
+                            </label>
+                            <label className={`baby-type-option ${editTwinsChoice === "girls" ? "baby-type-option--selected" : ""}`}>
+                              <input type="radio" checked={editTwinsChoice === "girls"} onChange={() => handleEditTwinsChoice("girls")} />
+                              <span>בנות</span>
+                            </label>
+                            <label className={`baby-type-option ${editTwinsChoice === "mixed" ? "baby-type-option--selected" : ""}`}>
+                              <input type="radio" checked={editTwinsChoice === "mixed"} onChange={() => handleEditTwinsChoice("mixed")} />
+                              <span>בן ובת</span>
+                            </label>
+                          </div>
+                        ) : null}
+                      </fieldset>
 
                       <div className="field-row field-row--tight">
                         <label className="field">
@@ -1548,22 +1610,39 @@ export function AdminDashboardPage() {
                 </label>
               </div>
 
-              <div className="field-row">
-                <label className="field">
-                  <span>מה נולד</span>
-                  <select {...createForm.register("baby_type")}>
-                    <option value="">היולדת תמלא</option>
-                    <option value="boy">בן</option>
-                    <option value="girl">בת</option>
-                  </select>
-                </label>
-              </div>
-
-              <label className="checkbox-field">
-                <input type="checkbox" {...createForm.register("is_twins")} />
-                <span>מדובר בתאומים / תאומות</span>
-                <small>במקרה כזה ייפתח אוטומטית לוח ל־3 שבועות.</small>
-              </label>
+              <fieldset className="baby-type-picker">
+                <legend>מה נולד?</legend>
+                <div className="baby-type-picker__options baby-type-picker__options--triple">
+                  <label className={`baby-type-option ${createBirthChoice === "boy" ? "baby-type-option--selected" : ""}`}>
+                    <input type="radio" checked={createBirthChoice === "boy"} onChange={() => handleCreateBirthChoice("boy")} />
+                    <span>בן</span>
+                  </label>
+                  <label className={`baby-type-option ${createBirthChoice === "girl" ? "baby-type-option--selected" : ""}`}>
+                    <input type="radio" checked={createBirthChoice === "girl"} onChange={() => handleCreateBirthChoice("girl")} />
+                    <span>בת</span>
+                  </label>
+                  <label className={`baby-type-option ${createBirthChoice === "twins" ? "baby-type-option--selected" : ""}`}>
+                    <input type="radio" checked={createBirthChoice === "twins"} onChange={() => handleCreateBirthChoice("twins")} />
+                    <span>תאומים</span>
+                  </label>
+                </div>
+                {createBirthChoice === "twins" ? (
+                  <div className="baby-type-picker__options baby-type-picker__options--triple">
+                    <label className={`baby-type-option ${createTwinsChoice === "boys" ? "baby-type-option--selected" : ""}`}>
+                      <input type="radio" checked={createTwinsChoice === "boys"} onChange={() => handleCreateTwinsChoice("boys")} />
+                      <span>בנים</span>
+                    </label>
+                    <label className={`baby-type-option ${createTwinsChoice === "girls" ? "baby-type-option--selected" : ""}`}>
+                      <input type="radio" checked={createTwinsChoice === "girls"} onChange={() => handleCreateTwinsChoice("girls")} />
+                      <span>בנות</span>
+                    </label>
+                    <label className={`baby-type-option ${createTwinsChoice === "mixed" ? "baby-type-option--selected" : ""}`}>
+                      <input type="radio" checked={createTwinsChoice === "mixed"} onChange={() => handleCreateTwinsChoice("mixed")} />
+                      <span>בן ובת</span>
+                    </label>
+                  </div>
+                ) : null}
+              </fieldset>
 
               <label className="field">
                 <span>תאריך התחלה</span>

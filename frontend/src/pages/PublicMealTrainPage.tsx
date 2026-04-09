@@ -8,10 +8,10 @@ import { z } from "zod"
 import { MealCalendar } from "../components/MealCalendar"
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
-import { getBabyCopy } from "../lib/baby"
+import { getBabyCopy, getBabyTone } from "../lib/baby"
 import { buildGoogleCalendarUrl, downloadCalendarReminder } from "../lib/calendarReminder"
 import { formatDatePair, getLocalTodayIso } from "../lib/date"
-import type { MealDay, PublicMealTrainData, Signup } from "../lib/types"
+import type { BabyTone, MealDay, PublicMealTrainData, Signup } from "../lib/types"
 import { readVolunteerProfile, saveVolunteerProfile } from "../lib/volunteerProfile"
 
 const signupSchema = z.object({
@@ -143,6 +143,8 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
       day.date >= getLocalTodayIso(),
     ) ?? []
   const babyCopy = getBabyCopy(trainQuery.data?.baby_type, trainQuery.data?.is_twins)
+  const displayTone: BabyTone | null =
+    trainQuery.data?.is_twins && !trainQuery.data?.baby_type ? "mixed" : trainQuery.data?.baby_type ?? null
   const pageTitle = trainQuery.data ? `מפנקות את ${trainQuery.data.family_title}` : "השתבצות לארוחות"
   const pageSubtitle = `מזל טוב ${babyCopy.blessing}`
   const hasOpenDays =
@@ -152,6 +154,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
       ? buildGoogleCalendarUrl({
           familyTitle: trainQuery.data.family_title,
           babyType: trainQuery.data.baby_type,
+          isTwins: trainQuery.data.is_twins,
           date: completedSignup.dayDate,
           reminderTime: trainQuery.data.reminder_time,
           deliveryDeadline: completedSignup.deliveryDeadline,
@@ -169,7 +172,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
     <PageShell
       title={pageTitle}
       subtitle={pageSubtitle}
-      tone={trainQuery.data?.baby_type ?? null}
+      tone={displayTone}
     >
       <section className="panel panel--form">
         {trainQuery.isLoading ? <p className="muted">טוען את הלוח...</p> : null}
@@ -244,7 +247,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
               <MealCalendar
                 startDate={trainQuery.data.start_date}
                 days={trainQuery.data.days}
-                babyType={trainQuery.data.baby_type}
+                babyType={displayTone}
                 mode="public"
                 selectedDayId={selectedDayId}
                 onSelectDay={(day) => {
@@ -279,6 +282,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                       downloadCalendarReminder({
                         familyTitle: trainQuery.data.family_title,
                         babyType: trainQuery.data.baby_type,
+                        isTwins: trainQuery.data.is_twins,
                         date: completedSignup.dayDate,
                         reminderTime: trainQuery.data.reminder_time,
                         deliveryDeadline: completedSignup.deliveryDeadline,
@@ -380,11 +384,11 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
           </div>
 
           <div className="related-trains-grid">
-            {trainQuery.data.related_trains.map((relatedTrain) => (
-              <article
-                key={relatedTrain.public_token}
-                className={`related-train-card related-train-card--${relatedTrain.baby_type ?? "neutral"}`}
-              >
+              {trainQuery.data.related_trains.map((relatedTrain) => (
+                <article
+                  key={relatedTrain.public_token}
+                  className={`related-train-card related-train-card--${getBabyTone(relatedTrain.baby_type, relatedTrain.is_twins)}`}
+                >
                 <div className="related-train-card__content">
                   <p className="eyebrow">מפנקות את {relatedTrain.family_title}</p>
                   <h4>מזל טוב {getBabyCopy(relatedTrain.baby_type, relatedTrain.is_twins).blessing}</h4>

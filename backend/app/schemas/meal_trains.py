@@ -203,6 +203,7 @@ class PublicVolunteerSignupsLookup(BaseModel):
 class PublicVolunteerSignupResponse(BaseModel):
     family_title: str
     baby_type: str | None
+    is_twins: bool
     public_token: str
     date: date
     delivery_deadline: str
@@ -283,7 +284,7 @@ class AdminOverviewResponse(BaseModel):
 class PublicBirthNoticeCreate(BaseModel):
     family_name: str
     mother_name: str | None = None
-    baby_type: str
+    baby_type: str | None = None
     is_twins: bool = False
     start_date: date
 

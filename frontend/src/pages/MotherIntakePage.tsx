@@ -8,17 +8,15 @@ import { z } from "zod"
 import { MealCalendar } from "../components/MealCalendar"
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
-import { getBabyCopy } from "../lib/baby"
-import type { MealDay, PublicIntakeData } from "../lib/types"
+import { getBabyCopy, getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
+import type { BabyTone, MealDay, PublicIntakeData } from "../lib/types"
 
 type IntakeTab = "details" | "calendar"
 const TWO_WEEKS_DAYS = 14
 const THREE_WEEKS_DAYS = 21
 
 const intakeSchema = z.object({
-  baby_type: z.enum(["boy", "girl"], {
-    error: "צריך לבחור מה נולד",
-  }),
+  baby_type: z.enum(["boy", "girl"]).optional(),
   is_twins: z.boolean(),
   mother_name: z.string().optional(),
   address: z.string().min(2, "כתובת חובה"),
@@ -38,6 +36,14 @@ const intakeSchema = z.object({
       needed: z.boolean(),
     }),
   ),
+}).superRefine((values, ctx) => {
+  if (!values.is_twins && !values.baby_type) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["baby_type"],
+      message: "צריך לבחור מה נולד",
+    })
+  }
 })
 
 type IntakeValues = z.infer<typeof intakeSchema>
@@ -139,6 +145,11 @@ export function MotherIntakePage() {
   })
 
   useEffect(() => {
+    register("baby_type")
+    register("is_twins")
+  }, [register])
+
+  useEffect(() => {
     if (!intakeQuery.data) {
       return
     }
@@ -179,6 +190,9 @@ export function MotherIntakePage() {
 
   const babyType = watch("baby_type")
   const isTwins = watch("is_twins")
+  const birthChoice = getBirthChoice(babyType, isTwins)
+  const twinsChoice = getTwinsChoice(babyType, isTwins)
+  const displayTone: BabyTone | null = isTwins && !babyType ? "mixed" : babyType ?? null
   const babyCopy = getBabyCopy(babyType, isTwins)
   const dayChoices = watch("day_choices") ?? []
   const displayDays = intakeQuery.data
@@ -220,11 +234,23 @@ export function MotherIntakePage() {
     setValue("day_choices", nextChoices, { shouldDirty: true, shouldValidate: true })
   }
 
+  function handleBirthChoice(choice: BirthChoice) {
+    const next = resolveBirthSelection(choice, twinsChoice)
+    setValue("is_twins", next.isTwins, { shouldDirty: true, shouldValidate: true })
+    setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
+  }
+
+  function handleTwinsChoice(choice: TwinsChoice) {
+    const next = resolveBirthSelection("twins", choice)
+    setValue("is_twins", true, { shouldDirty: true, shouldValidate: true })
+    setValue("baby_type", next.babyType ?? undefined, { shouldDirty: true, shouldValidate: true })
+  }
+
   return (
     <PageShell
       title="טופס יולדת"
-      subtitle="מלאי את הפרטים, סמני באילו ימים צריך ארוחה, ובמקרה של תאומים נפתח אוטומטית לוח ל־3 שבועות."
-      tone={babyType}
+      subtitle="מלאי את הפרטים וסמני באילו ימים צריך ארוחה."
+      tone={displayTone}
     >
       <section className="panel panel--form">
         {intakeQuery.isLoading ? <p className="muted">טוען את הטופס...</p> : null}
@@ -281,24 +307,50 @@ export function MotherIntakePage() {
               <>
                 <fieldset className="baby-type-picker">
                   <legend>מה נולד?</legend>
-                  <div className="baby-type-picker__options baby-type-picker__options--compact">
-                    <label className={`baby-type-option ${babyType === "boy" ? "baby-type-option--selected" : ""}`}>
-                      <input type="radio" value="boy" {...register("baby_type")} />
+                  <div className="baby-type-picker__options baby-type-picker__options--triple">
+                    <label className={`baby-type-option ${birthChoice === "boy" ? "baby-type-option--selected" : ""}`}>
+                      <input
+                        type="radio"
+                        checked={birthChoice === "boy"}
+                        onChange={() => handleBirthChoice("boy")}
+                      />
                       <span>בן</span>
                     </label>
-                    <label className={`baby-type-option ${babyType === "girl" ? "baby-type-option--selected" : ""}`}>
-                      <input type="radio" value="girl" {...register("baby_type")} />
+                    <label className={`baby-type-option ${birthChoice === "girl" ? "baby-type-option--selected" : ""}`}>
+                      <input
+                        type="radio"
+                        checked={birthChoice === "girl"}
+                        onChange={() => handleBirthChoice("girl")}
+                      />
                       <span>בת</span>
+                    </label>
+                    <label className={`baby-type-option ${birthChoice === "twins" ? "baby-type-option--selected" : ""}`}>
+                      <input
+                        type="radio"
+                        checked={birthChoice === "twins"}
+                        onChange={() => handleBirthChoice("twins")}
+                      />
+                      <span>תאומים</span>
                     </label>
                   </div>
                   {errors.baby_type ? <small>{errors.baby_type.message}</small> : null}
+                  {birthChoice === "twins" ? (
+                    <div className="baby-type-picker__options baby-type-picker__options--triple">
+                      <label className={`baby-type-option ${twinsChoice === "boys" ? "baby-type-option--selected" : ""}`}>
+                        <input type="radio" checked={twinsChoice === "boys"} onChange={() => handleTwinsChoice("boys")} />
+                        <span>בנים</span>
+                      </label>
+                      <label className={`baby-type-option ${twinsChoice === "girls" ? "baby-type-option--selected" : ""}`}>
+                        <input type="radio" checked={twinsChoice === "girls"} onChange={() => handleTwinsChoice("girls")} />
+                        <span>בנות</span>
+                      </label>
+                      <label className={`baby-type-option ${twinsChoice === "mixed" ? "baby-type-option--selected" : ""}`}>
+                        <input type="radio" checked={twinsChoice === "mixed"} onChange={() => handleTwinsChoice("mixed")} />
+                        <span>בן ובת</span>
+                      </label>
+                    </div>
+                  ) : null}
                 </fieldset>
-
-                <label className="checkbox-field">
-                  <input type="checkbox" {...register("is_twins")} />
-                  <span>מדובר בתאומים / תאומות</span>
-                  <small>כשמסמנים כאן, המערכת פותחת אוטומטית לוח ל־3 שבועות.</small>
-                </label>
 
                 <label className="field">
                   <span>שם היולדת</span>
@@ -379,7 +431,7 @@ export function MotherIntakePage() {
                 <MealCalendar
                   startDate={intakeQuery.data.start_date}
                   days={displayDays}
-                  babyType={babyType}
+                  babyType={displayTone}
                   mode="intake"
                   selectionMap={selectionMap}
                     onToggleNeeded={toggleNeeded}

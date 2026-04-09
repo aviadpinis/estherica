@@ -4,6 +4,7 @@ import type { BabyType } from "./types"
 interface CalendarReminderInput {
   familyTitle: string
   babyType: BabyType | null
+  isTwins?: boolean
   date: string
   reminderTime: string
   deliveryDeadline: string
@@ -52,7 +53,7 @@ function buildEventWindow(date: string, reminderTime: string, deliveryDeadline: 
 }
 
 function buildDescription(input: CalendarReminderInput) {
-  const babyCopy = getBabyCopy(input.babyType)
+  const babyCopy = getBabyCopy(input.babyType, input.isTwins)
   const lines = [
     `פינוק ליולדת - ${input.familyTitle}`,
     `מזל טוב ${babyCopy.blessing}`,
