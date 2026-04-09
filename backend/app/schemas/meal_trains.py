@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SignupResponse(BaseModel):
@@ -147,8 +147,8 @@ class IntakeSubmission(BaseModel):
     baby_type: str | None = None
     is_twins: bool = False
     address: str
-    household_size: str | None = None
-    children_ages: str | None = None
+    household_size: str = Field(min_length=1)
+    children_ages: str = Field(min_length=1)
     special_requirements: str | None = None
     kashrut: str | None = None
     contact_phone: str
@@ -157,6 +157,14 @@ class IntakeSubmission(BaseModel):
     delivery_deadline: str | None = None
     general_notes: str | None = None
     day_choices: list[IntakeDayChoice]
+
+    @field_validator("household_size", "children_ages")
+    @classmethod
+    def validate_required_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("חובה למלא")
+        return cleaned
 
 
 class PublicIntakeResponse(BaseModel):
@@ -224,6 +232,8 @@ class PublicMealTrainResponse(BaseModel):
     default_delivery_time: str
     reminder_time: str
     address: str | None
+    household_size: str | None
+    children_ages: str | None
     special_requirements: str | None
     kashrut: str | None
     contact_phone: str | None

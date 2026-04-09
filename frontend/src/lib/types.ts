@@ -114,6 +114,8 @@ export interface PublicMealTrainData {
   default_delivery_time: string
   reminder_time: string
   address: string | null
+  household_size: string | null
+  children_ages: string | null
   special_requirements: string | null
   kashrut: string | null
   contact_phone: string | null

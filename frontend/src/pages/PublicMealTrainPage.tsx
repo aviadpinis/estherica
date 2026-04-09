@@ -198,6 +198,12 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                   <strong>כשרות:</strong> {trainQuery.data.kashrut || "לא צוינה"}
                 </p>
                 <p>
+                  <strong>נפשות:</strong> {trainQuery.data.household_size || "לא צוין"}
+                </p>
+                <p>
+                  <strong>גילאי הילדים:</strong> {trainQuery.data.children_ages || "לא צוינו"}
+                </p>
+                <p>
                   <strong>שעת הבאה רצויה:</strong> {trainQuery.data.default_delivery_time}
                 </p>
                 <p>

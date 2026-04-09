@@ -20,8 +20,8 @@ const intakeSchema = z.object({
   is_twins: z.boolean(),
   mother_name: z.string().optional(),
   address: z.string().min(2, "כתובת חובה"),
-  household_size: z.string().optional(),
-  children_ages: z.string().optional(),
+  household_size: z.string().trim().min(1, "צריך למלא נפשות"),
+  children_ages: z.string().trim().min(1, "צריך למלא גילאי הילדים"),
   special_requirements: z.string().optional(),
   kashrut: z.string().optional(),
   contact_phone: z.string().min(7, "טלפון חובה"),
@@ -378,10 +378,12 @@ export function MotherIntakePage() {
                   <label className="field">
                     <span>נפשות</span>
                     <input {...register("household_size")} />
+                    {errors.household_size ? <small>{errors.household_size.message}</small> : null}
                   </label>
                   <label className="field">
                     <span>גילאי הילדים</span>
                     <input {...register("children_ages")} />
+                    {errors.children_ages ? <small>{errors.children_ages.message}</small> : null}
                   </label>
                 </div>
                 <div className="field-row field-row--keep">

@@ -1240,6 +1240,12 @@ export function AdminDashboardPage() {
                             <strong>כתובת:</strong> {selectedTrain.intake_form.address}
                           </p>
                           <p>
+                            <strong>נפשות:</strong> {selectedTrain.intake_form.household_size || "לא נרשם"}
+                          </p>
+                          <p>
+                            <strong>גילאי הילדים:</strong> {selectedTrain.intake_form.children_ages || "לא נרשמו"}
+                          </p>
+                          <p>
                             <strong>פלאפון של היולדת:</strong> {selectedTrain.intake_form.contact_phone}
                           </p>
                           <p>
