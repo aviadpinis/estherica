@@ -266,8 +266,8 @@ def create_meal_train(
         start_date=payload.start_date,
         default_delivery_time=payload.default_delivery_time,
         reminder_time=payload.reminder_time,
-        intake_token=generate_token(),
-        public_token=generate_token(),
+        intake_token=generate_token(12),
+        public_token=generate_token(8),
     )
     train.days = build_default_days(payload.start_date, payload.default_delivery_time)
     db.add(train)

@@ -328,8 +328,8 @@ def create_birth_notice(
         start_date=payload.start_date,
         default_delivery_time=DEFAULT_DELIVERY_TIME,
         reminder_time=DEFAULT_REMINDER_TIME,
-        intake_token=generate_token(),
-        public_token=generate_token(),
+        intake_token=generate_token(12),
+        public_token=generate_token(8),
         status=MealTrainStatus.draft,
     )
     train.days = build_default_days(payload.start_date, DEFAULT_DELIVERY_TIME)

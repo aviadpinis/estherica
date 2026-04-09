@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import secrets
+import string
 from datetime import UTC, date, datetime, timedelta
 
 from app.models.entities import MealDay, MealDayStatus, MealTrain, MealTrainStatus
 
 DEFAULT_DELIVERY_TIME = "18:00"
 DEFAULT_REMINDER_TIME = "09:00"
+TOKEN_ALPHABET = string.ascii_letters + string.digits
 
 
-def generate_token() -> str:
-    return secrets.token_urlsafe(18)
+def generate_token(length: int = 12) -> str:
+    return "".join(secrets.choice(TOKEN_ALPHABET) for _ in range(length))
 
 
 def build_default_days(start_date: date, delivery_deadline: str) -> list[MealDay]:
