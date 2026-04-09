@@ -17,6 +17,7 @@ interface AuthContextValue {
 }
 
 const storageKey = "estherica-admin-auth"
+const lastEmailKey = "estherica-admin-last-email"
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -38,6 +39,20 @@ function readStoredAuth(): StoredAuth | null {
   }
 }
 
+export function readLastAdminEmail() {
+  if (typeof window === "undefined") {
+    return ""
+  }
+
+  const fromLastEmail = window.localStorage.getItem(lastEmailKey)
+  if (fromLastEmail) {
+    return fromLastEmail
+  }
+
+  const storedAuth = readStoredAuth()
+  return storedAuth?.email ?? ""
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const initialState = readStoredAuth()
   const [token, setToken] = useState<string | null>(initialState?.token ?? null)
@@ -51,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fullName: payload.admin.full_name,
     }
     window.localStorage.setItem(storageKey, JSON.stringify(nextState))
+    window.localStorage.setItem(lastEmailKey, nextState.email)
     setToken(nextState.token)
     setAdminEmail(nextState.email)
     setAdminFullName(nextState.fullName)

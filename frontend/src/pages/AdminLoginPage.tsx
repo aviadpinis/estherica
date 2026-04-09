@@ -6,7 +6,7 @@ import { z } from "zod"
 
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
-import { useAuth } from "../lib/auth"
+import { readLastAdminEmail, useAuth } from "../lib/auth"
 import type { AuthResponse } from "../lib/types"
 
 const loginSchema = z.object({
@@ -26,8 +26,8 @@ export function AdminLoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "admin@estherica.local",
-      password: "change-me",
+      email: readLastAdminEmail(),
+      password: "",
     },
   })
 

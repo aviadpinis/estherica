@@ -259,6 +259,33 @@ function TrashIcon() {
   )
 }
 
+function ShareIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M15 8L19 4M19 4H15M19 4V8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 6H8C6.34 6 5 7.34 5 9V16C5 17.66 6.34 19 8 19H15C16.66 19 18 17.66 18 16V14"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 12L19 5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 function getInitialNotificationPermission() {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return "unsupported" as const
@@ -431,7 +458,7 @@ function CalendarBreakdownChart({
 }
 
 export function AdminDashboardPage() {
-  const { token, adminEmail, adminFullName, logout } = useAuth()
+  const { token, logout } = useAuth()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<AdminTab>("cases")
   const [activeCaseTab, setActiveCaseTab] = useState<CaseDetailTab>("summary")
@@ -781,6 +808,32 @@ export function AdminDashboardPage() {
     setNotificationPermission(permission)
   }
 
+  async function shareForVolunteers(train: MealTrainDetail) {
+    const shareUrl = buildPublicLink(train.public_token)
+    const shareText = buildSignupShareMessage(train)
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: `מפנקות את ${train.family_title}`,
+          text: shareText,
+          url: shareUrl,
+        })
+        return
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return
+        }
+      }
+    }
+
+    window.open(
+      buildWhatsAppLink(shareText),
+      "_blank",
+      "noopener,noreferrer",
+    )
+  }
+
   function openTrain(trainId: number, nextTab: AdminTab = "cases") {
     setSelectedTrainId(trainId)
     setSelectedDayId(null)
@@ -875,8 +928,7 @@ export function AdminDashboardPage() {
       tone={selectedTrain?.baby_type ?? null}
       actions={
         <div className="toolbar-actions">
-          <span className="muted">{adminFullName || adminEmail}</span>
-          {notificationPermission !== "unsupported" && notificationPermission !== "granted" ? (
+          {notificationPermission !== "unsupported" ? (
             <button className="button button--ghost" type="button" onClick={requestNotifications}>
               הפעלת התראות
             </button>
@@ -1201,18 +1253,14 @@ export function AdminDashboardPage() {
                         className="button button--primary button--whatsapp"
                         type="button"
                         disabled={!isSignupReady}
-                        onClick={() => {
+                        onClick={async () => {
                           if (!isSignupReady) {
                             return
                           }
-                          window.open(
-                            buildWhatsAppLink(buildSignupShareMessage(selectedTrain)),
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
+                          await shareForVolunteers(selectedTrain)
                         }}
                       >
-                        <WhatsAppIcon />
+                        <ShareIcon />
                         {isSignupReady ? "שיתוף למבשלות" : "ממתין למילוי שאלון"}
                       </button>
                     </div>
