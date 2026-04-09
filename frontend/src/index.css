@@ -494,6 +494,15 @@ img {
   gap: 12px;
 }
 
+.detail-stack--compact {
+  gap: 6px;
+}
+
+.detail-stack--compact p {
+  margin: 0;
+  line-height: 1.45;
+}
+
 .train-card {
   display: grid;
   gap: 10px;
@@ -1369,6 +1378,11 @@ button.calendar-card {
 
 .community-header {
   margin-bottom: 16px;
+}
+
+.community-header--compact {
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .lobby-carousel {

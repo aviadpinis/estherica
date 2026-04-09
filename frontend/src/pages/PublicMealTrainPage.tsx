@@ -187,37 +187,35 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
 
         {trainQuery.data ? (
           <>
-            <div className="community-header">
+            <div className="community-header community-header--compact">
               <div>
                 <p className="eyebrow">{pageTitle}</p>
                 <h3>{pageSubtitle}</h3>
-                <p className="muted">{trainQuery.data.address || "כתובת תעודכן במידת הצורך"}</p>
               </div>
-              <div className="detail-stack">
+              <div className="detail-stack detail-stack--compact">
+                <p>
+                  <strong>כתובת:</strong> {trainQuery.data.address || "תעודכן במידת הצורך"}
+                </p>
                 <p>
                   <strong>כשרות:</strong> {trainQuery.data.kashrut || "לא צוינה"}
                 </p>
                 <p>
-                  <strong>נפשות:</strong> {trainQuery.data.household_size || "לא צוין"}
-                </p>
-                <p>
+                  <strong>נפשות:</strong> {trainQuery.data.household_size || "לא צוין"},{" "}
                   <strong>גילאי הילדים:</strong> {trainQuery.data.children_ages || "לא צוינו"}
                 </p>
                 <p>
                   <strong>שעת הבאה רצויה:</strong> {trainQuery.data.default_delivery_time}
                 </p>
                 <p>
-                  <strong>טלפון קשר:</strong> {trainQuery.data.contact_phone || "יעודכן בהמשך"}
+                  <strong>פלאפון ליצירת קשר:</strong> {trainQuery.data.contact_phone || "יעודכן בהמשך"}
                 </p>
+                {trainQuery.data.special_requirements ? (
+                  <p>
+                    <strong>דרישות מיוחדות:</strong> {trainQuery.data.special_requirements}
+                  </p>
+                ) : null}
               </div>
             </div>
-
-            {trainQuery.data.special_requirements ? (
-              <div className="notice-card">
-                <strong>דרישות מיוחדות</strong>
-                <p>{trainQuery.data.special_requirements}</p>
-              </div>
-            ) : null}
 
             {ownSignups.length ? (
               <section className="panel panel--nested">
