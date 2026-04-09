@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { Link, useParams } from "react-router-dom"
 import { z } from "zod"
 
+import { BrandMark } from "../components/BrandMark"
 import { MealCalendar } from "../components/MealCalendar"
 import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
@@ -172,8 +173,9 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
     <PageShell
       tone={displayTone}
       hideIntro
+      hideBrandInTopbar
     >
-      <section className="panel panel--form">
+      <section className="public-train-page">
         {trainQuery.isLoading ? <p className="muted">טוען את הלוח...</p> : null}
         {trainQuery.error ? (
           <p className="feedback feedback--error">
@@ -186,12 +188,16 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
 
         {trainQuery.data ? (
           <>
-            <section className={`public-train-summary public-train-summary--${getBabyTone(trainQuery.data.baby_type, trainQuery.data.is_twins)}`}>
-              <div className="public-train-summary__header">
-                <p className="eyebrow">לוח ההשתבצות</p>
-                <h2>{pageTitle} · {pageSubtitle}</h2>
+            <section className={`public-train-hero public-train-hero--${getBabyTone(trainQuery.data.baby_type, trainQuery.data.is_twins)}`}>
+              <div className="public-train-hero__headline">
+                <BrandMark compact />
+                <div className="public-train-hero__copy">
+                  <h1>{pageTitle}</h1>
+                  <p>{pageSubtitle}</p>
+                </div>
               </div>
-              <div className="detail-stack detail-stack--compact public-train-summary__details">
+
+              <div className="public-train-hero__details">
                 <p>
                   <strong>כתובת:</strong> {trainQuery.data.address || "תעודכן במידת הצורך"}
                 </p>
@@ -216,7 +222,7 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
               </div>
             </section>
 
-            <section className="panel panel--nested calendar-panel">
+            <section className="public-calendar-block">
               <p className="calendar-panel__title">
                 {hasOpenDays ? "לחצי על יום פנוי כדי להשתבץ" : "כרגע אין ימים פנויים בלוח"}
               </p>
@@ -299,7 +305,6 @@ function PublicMealTrainContent({ publicToken }: { publicToken: string }) {
                 </div>
               </section>
             ) : null}
-
           </>
         ) : null}
       </section>

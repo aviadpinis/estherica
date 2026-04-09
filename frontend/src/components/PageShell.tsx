@@ -13,6 +13,7 @@ interface PageShellProps {
   tone?: BabyTone | null
   eyebrow?: string
   hideIntro?: boolean
+  hideBrandInTopbar?: boolean
 }
 
 export function PageShell({
@@ -23,15 +24,22 @@ export function PageShell({
   tone = null,
   eyebrow = "אסתריקה",
   hideIntro = false,
+  hideBrandInTopbar = false,
 }: PageShellProps) {
+  const showTopbar = Boolean(actions) || !hideBrandInTopbar
+
   return (
     <div className={`page-shell page-shell--${getBabyTone(tone)}`}>
-      <header className="topbar">
-        <div className="topbar__actions">{actions}</div>
-        <Link to="/" className="topbar__brand">
-          <BrandMark compact />
-        </Link>
-      </header>
+      {showTopbar ? (
+        <header className="topbar">
+          <div className="topbar__actions">{actions}</div>
+          {!hideBrandInTopbar ? (
+            <Link to="/" className="topbar__brand">
+              <BrandMark compact />
+            </Link>
+          ) : null}
+        </header>
+      ) : null}
 
       <main className="page-shell__body">
         {!hideIntro ? (
