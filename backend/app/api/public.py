@@ -322,7 +322,7 @@ def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> P
         children_ages=intake.children_ages if intake else None,
         special_requirements=intake.special_requirements if intake else None,
         kashrut=intake.kashrut if intake else None,
-        contact_phone=intake.contact_phone if intake else None,
+        contact_phone=intake.contact_phone if intake and intake.contact_phone else train.contact_phone,
         days=[MealDayResponse.model_validate(day) for day in train.days],
         related_trains=_build_related_trains(db, train.id),
     )
