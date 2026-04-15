@@ -1993,10 +1993,10 @@ export function AdminDashboardPage() {
                     }}
                   >
                     <span className="reminder-row__text">
-                      <strong>{assignment.volunteer_name}</strong>
+                      <span>{assignment.volunteer_name}</span>
                       <span> - </span>
-                      <span>משפחת {assignment.family_title}</span>
-                      {assignment.mother_name ? <span> * {assignment.mother_name}</span> : null}
+                      <span>{assignment.family_title}</span>
+                      {assignment.mother_name ? <span> · {assignment.mother_name}</span> : null}
                     </span>
                     <span className="reminder-row__action" aria-hidden="true">
                       <span className="reminder-row__time">עד {assignment.delivery_deadline}</span>
