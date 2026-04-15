@@ -177,6 +177,41 @@ function buildSignupShareMessage(train: MealTrainDetail, options?: { includeLink
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:${includeLink ? `\n${buildPublicLink(train.public_token)}` : ""}`
 }
 
+function buildVolunteerReminderMessage(train: MealTrainDetail, day: MealDay) {
+  if (!day.signup) {
+    return null
+  }
+
+  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
+  const intake = train.intake_form
+  const motherLabel = train.mother_name || train.family_title
+  const contactPhone = intake?.contact_phone || train.contact_phone
+  const lines = [
+    `שלום ${day.signup.volunteer_name},`,
+    `מתזכרת שהיום את מפנקת את ${motherLabel}.`,
+    `מזל טוב ${babyCopy.blessing}.`,
+    `להביא עד ${day.delivery_deadline}.`,
+  ]
+
+  if (intake?.address) {
+    lines.push(`כתובת: ${intake.address}`)
+  }
+
+  if (intake?.kashrut) {
+    lines.push(`כשרות: ${intake.kashrut}`)
+  }
+
+  if (intake?.special_requirements) {
+    lines.push(`דרישות מיוחדות: ${intake.special_requirements}`)
+  }
+
+  if (contactPhone) {
+    lines.push(`טלפון ליצירת קשר: ${contactPhone}`)
+  }
+
+  return lines.join("\n")
+}
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -962,6 +997,8 @@ export function AdminDashboardPage() {
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const isSignupReady = selectedTrain?.status === "published"
   const shareableMotherPhone = selectedTrain?.intake_form?.contact_phone ?? selectedTrain?.contact_phone ?? null
+  const volunteerReminderMessage =
+    selectedTrain && selectedDay ? buildVolunteerReminderMessage(selectedTrain, selectedDay) : null
   const confirmActionConfig =
     selectedTrain && confirmAction
       ? {
@@ -2026,6 +2063,24 @@ export function AdminDashboardPage() {
                 <p>{selectedDay.signup.phone}</p>
                 {selectedDay.signup.meal_type ? <p>{selectedDay.signup.meal_type}</p> : null}
                 {selectedDay.signup.note ? <p>{selectedDay.signup.note}</p> : null}
+                {volunteerReminderMessage ? (
+                  <div className="signup-preview__actions">
+                    <button
+                      className="button button--ghost button--share-action"
+                      type="button"
+                      onClick={() => {
+                        window.open(
+                          buildWhatsAppLink(volunteerReminderMessage, selectedDay.signup?.phone ?? null),
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }}
+                    >
+                      <WhatsAppIcon className="button__icon button__icon--whatsapp" />
+                      שליחת תזכורת בוואטסאפ
+                    </button>
+                  </div>
+                ) : null}
                 <p className="muted">אם תשני את היום ל"פנוי" או ל"לא צריך", ההרשמה תבוטל אוטומטית.</p>
               </div>
             ) : (
