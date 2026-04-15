@@ -1031,6 +1031,10 @@ img {
   background: #d5e6fb;
 }
 
+.status--closed {
+  background: #efe3d4;
+}
+
 .status--not_needed,
 .status--completed {
   background: #e8e1d9;

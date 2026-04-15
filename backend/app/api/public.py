@@ -157,10 +157,14 @@ def _build_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
 def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
     today = _today_in_project_timezone()
     recent_cutoff = today - timedelta(days=30)
+    schedule_end = max((day.date for day in train.days), default=None)
+    if schedule_end is None or schedule_end >= today or schedule_end < recent_cutoff:
+        return None
+
     recent_days = [
         day
         for day in train.days
-        if recent_cutoff <= day.date < today and day.status in (MealDayStatus.assigned, MealDayStatus.not_needed)
+        if recent_cutoff <= day.date <= schedule_end and day.status in (MealDayStatus.assigned, MealDayStatus.not_needed)
     ]
     if not recent_days:
         return None
@@ -176,7 +180,7 @@ def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | No
         is_twins=train.is_twins,
         public_token=train.public_token,
         start_date=train.start_date,
-        end_date=end_date,
+        end_date=end_date or schedule_end,
         open_days=0,
         assigned_days=len(assigned_days),
         next_open_date=None,

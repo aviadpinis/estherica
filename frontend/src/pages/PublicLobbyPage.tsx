@@ -14,11 +14,12 @@ function LobbyTrainCard({ train, showAction = true }: { train: PublicLobbyTrain;
   const nextOpenLabel = train.next_open_date ? formatDatePair(train.next_open_date).short : null
   const endLabel = train.end_date ? formatDatePair(train.end_date).short : null
   const isOpen = train.open_days > 0
+  const isRecent = train.stage === "recent"
   const tone = getBabyTone(train.baby_type, train.is_twins)
 
-  let statusLabel = "ממשיכות להתפנק"
-  let bodyText = `כל הימים סגורים${endLabel ? ` · עד ${endLabel}` : ""}.`
-  if (train.stage === "recent") {
+  let statusLabel = "סגור להרשמה"
+  let bodyText = `כל הימים תפוסים${endLabel ? ` · עד ${endLabel}` : ""}.`
+  if (isRecent) {
     statusLabel = "פינקנו לאחרונה"
     bodyText = `${train.assigned_days} פינוקים נסגרו${endLabel ? ` · הסתיים ב־${endLabel}` : ""}.`
   } else if (isOpen) {
@@ -30,7 +31,7 @@ function LobbyTrainCard({ train, showAction = true }: { train: PublicLobbyTrain;
     <article className={`lobby-card lobby-card--${tone}`}>
       <div className="lobby-card__header">
         <p className="eyebrow">מפנקות את {train.family_title}</p>
-        <span className={`status ${isOpen ? "status--open" : "status--completed"}`}>{statusLabel}</span>
+        <span className={`status ${isRecent ? "status--completed" : isOpen ? "status--open" : "status--closed"}`}>{statusLabel}</span>
       </div>
 
       <div className="lobby-card__body">
