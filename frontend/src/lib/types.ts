@@ -186,10 +186,17 @@ export interface AdminUpcomingAssignment {
   family_title: string
   mother_name: string | null
   baby_type: BabyType | null
+  is_twins: boolean
   volunteer_name: string
   phone: string
   meal_type: string | null
   delivery_deadline: string
+  address: string | null
+  household_size: string | null
+  children_ages: string | null
+  kashrut: string | null
+  special_requirements: string | null
+  contact_phone: string | null
 }
 
 export interface AdminVolunteerStats {
@@ -218,6 +225,7 @@ export interface AdminOverview {
   urgent_open_days: number
   total_assigned_days: number
   upcoming_assignments: AdminUpcomingAssignment[]
+  today_reminders: AdminUpcomingAssignment[]
   volunteer_stats: AdminVolunteerStats[]
   attention_trains: AdminAttentionTrain[]
 }

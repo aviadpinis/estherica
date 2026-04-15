@@ -283,10 +283,17 @@ class AdminUpcomingAssignment(BaseModel):
     family_title: str
     mother_name: str | None
     baby_type: str | None
+    is_twins: bool = False
     volunteer_name: str
     phone: str
     meal_type: str | None
     delivery_deadline: str
+    address: str | None = None
+    household_size: str | None = None
+    children_ages: str | None = None
+    kashrut: str | None = None
+    special_requirements: str | None = None
+    contact_phone: str | None = None
 
 
 class AdminVolunteerStats(BaseModel):
@@ -315,6 +322,7 @@ class AdminOverviewResponse(BaseModel):
     urgent_open_days: int
     total_assigned_days: int
     upcoming_assignments: list[AdminUpcomingAssignment]
+    today_reminders: list[AdminUpcomingAssignment]
     volunteer_stats: list[AdminVolunteerStats]
     attention_trains: list[AdminAttentionTrain]
 
@@ -336,3 +344,58 @@ class PublicBirthNoticeCreate(BaseModel):
 class PublicBirthNoticeCreateResponse(BaseModel):
     intake_token: str
     family_title: str
+
+
+class SmsReminderClaimRequest(BaseModel):
+    device_id: str = Field(min_length=2, max_length=120)
+    for_date: date | None = None
+
+
+class SmsReminderDispatchResponse(BaseModel):
+    dispatch_id: int
+    meal_day_id: int
+    scheduled_for: date
+    delivery_deadline: str
+    volunteer_name: str
+    volunteer_phone: str
+    family_title: str
+    mother_name: str | None
+    address: str | None
+    kashrut: str | None
+    special_requirements: str | None
+    contact_phone: str | None
+    household_size: str | None
+    children_ages: str | None
+    message_text: str
+
+
+class SmsReminderClaimResponse(BaseModel):
+    for_date: date
+    dispatches: list[SmsReminderDispatchResponse]
+
+
+class SmsReminderReportItem(BaseModel):
+    dispatch_id: int
+    status: str
+    provider_message_id: str | None = None
+    failure_reason: str | None = None
+    reported_at: datetime | None = None
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"sent", "failed"}:
+            raise ValueError("status must be sent or failed")
+        return normalized
+
+
+class SmsReminderReportRequest(BaseModel):
+    device_id: str = Field(min_length=2, max_length=120)
+    results: list[SmsReminderReportItem]
+
+
+class SmsReminderReportResponse(BaseModel):
+    updated: int
+    sent: int
+    failed: int
