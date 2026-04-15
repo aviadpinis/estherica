@@ -418,7 +418,7 @@ img {
 
 .admin-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -879,6 +879,7 @@ img {
 }
 
 .assignment-list,
+.reminder-list,
 .leaderboard-list,
 .attention-list,
 .registration-list {
@@ -938,6 +939,36 @@ img {
   text-align: left;
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+.assignment-card__content {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  text-align: right;
+}
+
+.assignment-card--reminder {
+  width: 100%;
+  text-align: right;
+  cursor: pointer;
+}
+
+.assignment-card--reminder:hover {
+  border-color: rgba(37, 211, 102, 0.32);
+  background: rgba(37, 211, 102, 0.06);
+}
+
+.assignment-card__meta--reminder {
+  min-width: 152px;
+}
+
+.assignment-card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .leaderboard-item__rank {
@@ -1044,13 +1075,6 @@ img {
   border-radius: 18px;
   padding: 14px;
   background: rgba(23, 18, 15, 0.05);
-}
-
-.signup-preview__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 12px 0;
 }
 
 .feedback {

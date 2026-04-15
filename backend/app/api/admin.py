@@ -161,7 +161,7 @@ def get_admin_overview(
 ) -> AdminOverviewResponse:
     trains = (
         db.query(MealTrain)
-        .options(joinedload(MealTrain.days).joinedload(MealDay.signup))
+        .options(joinedload(MealTrain.days).joinedload(MealDay.signup), joinedload(MealTrain.intake_form))
         .order_by(MealTrain.created_at.desc())
         .all()
     )
@@ -170,6 +170,7 @@ def get_admin_overview(
     summary_by_id = {summary.id: summary for summary in summaries}
     today = _today_in_project_timezone()
     upcoming_assignments: list[AdminUpcomingAssignment] = []
+    today_reminders: list[AdminUpcomingAssignment] = []
     volunteer_bucket: dict[str, AdminVolunteerStats] = {}
     attention_trains: list[AdminAttentionTrain] = []
 
@@ -195,19 +196,30 @@ def get_admin_overview(
             if signup is None:
                 continue
 
+            intake = train.intake_form
+            assignment = AdminUpcomingAssignment(
+                date=day.date,
+                family_title=train.family_title,
+                mother_name=train.mother_name,
+                baby_type=train.baby_type.value if train.baby_type else None,
+                is_twins=train.is_twins,
+                volunteer_name=signup.volunteer_name,
+                phone=signup.phone,
+                meal_type=signup.meal_type,
+                delivery_deadline=day.delivery_deadline,
+                address=intake.address if intake else None,
+                household_size=intake.household_size if intake else None,
+                children_ages=intake.children_ages if intake else None,
+                kashrut=intake.kashrut if intake else None,
+                special_requirements=intake.special_requirements if intake else None,
+                contact_phone=(intake.contact_phone if intake else None) or train.contact_phone,
+            )
+
             if day.date >= today:
-                upcoming_assignments.append(
-                    AdminUpcomingAssignment(
-                        date=day.date,
-                        family_title=train.family_title,
-                        mother_name=train.mother_name,
-                        baby_type=train.baby_type.value if train.baby_type else None,
-                        volunteer_name=signup.volunteer_name,
-                        phone=signup.phone,
-                        meal_type=signup.meal_type,
-                        delivery_deadline=day.delivery_deadline,
-                    )
-                )
+                upcoming_assignments.append(assignment)
+
+            if day.date == today:
+                today_reminders.append(assignment)
 
             bucket_key = signup.volunteer_key or f"legacy::{signup.volunteer_name}::{signup.phone}"
             entry = volunteer_bucket.get(bucket_key)
@@ -230,6 +242,7 @@ def get_admin_overview(
                 entry.volunteer_name = signup.volunteer_name
 
     upcoming_assignments.sort(key=lambda item: (item.date, item.delivery_deadline, item.family_title))
+    today_reminders.sort(key=lambda item: (item.delivery_deadline, item.family_title, item.volunteer_name))
     attention_trains.sort(
         key=lambda item: (
             0 if item.urgent_open_days > 0 else 1,
@@ -252,6 +265,7 @@ def get_admin_overview(
         urgent_open_days=sum(summary.urgent_open_days for summary in summaries if not summary.is_archived),
         total_assigned_days=sum(summary.assigned_days for summary in summaries if not summary.is_archived),
         upcoming_assignments=upcoming_assignments[:12],
+        today_reminders=today_reminders,
         volunteer_stats=volunteer_stats[:8],
         attention_trains=attention_trains[:6],
     )

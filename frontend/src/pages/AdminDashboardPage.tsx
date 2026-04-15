@@ -22,6 +22,7 @@ import {
 import type {
   AdminAccount,
   AdminOverview,
+  AdminUpcomingAssignment,
   BabyTone,
   MealDay,
   MealTrainDetail,
@@ -92,7 +93,7 @@ type EditTrainValues = z.infer<typeof editTrainSchema>
 type AddDayValues = z.infer<typeof addDaySchema>
 type CreateAdminValues = z.infer<typeof createAdminSchema>
 
-type AdminTab = "cases" | "stats" | "new" | "admins"
+type AdminTab = "cases" | "new" | "reminders" | "stats" | "admins"
 type CaseDetailTab = "summary" | "links" | "calendar" | "details"
 type ConfirmAction = "gift" | "visibility" | "delete"
 
@@ -110,6 +111,7 @@ interface TabOption {
 const adminTabs: TabOption[] = [
   { id: "cases", label: "יולדות" },
   { id: "new", label: "יולדת חדשה" },
+  { id: "reminders", label: "תזכורת למבשלות" },
   { id: "stats", label: "סטטיסטיקה" },
   { id: "admins", label: "מנהלות" },
 ]
@@ -177,36 +179,36 @@ function buildSignupShareMessage(train: MealTrainDetail, options?: { includeLink
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:${includeLink ? `\n${buildPublicLink(train.public_token)}` : ""}`
 }
 
-function buildVolunteerReminderMessage(train: MealTrainDetail, day: MealDay) {
-  if (!day.signup) {
-    return null
-  }
-
-  const babyCopy = getBabyCopy(train.baby_type, train.is_twins)
-  const intake = train.intake_form
-  const motherLabel = train.mother_name || train.family_title
-  const contactPhone = intake?.contact_phone || train.contact_phone
+function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment) {
+  const babyCopy = getBabyCopy(assignment.baby_type, assignment.is_twins)
+  const motherLabel = assignment.mother_name || assignment.family_title
   const lines = [
-    `שלום ${day.signup.volunteer_name},`,
+    `שלום ${assignment.volunteer_name},`,
     `מתזכרת שהיום את מפנקת את ${motherLabel}.`,
     `מזל טוב ${babyCopy.blessing}.`,
-    `להביא עד ${day.delivery_deadline}.`,
+    `להביא עד ${assignment.delivery_deadline}.`,
   ]
 
-  if (intake?.address) {
-    lines.push(`כתובת: ${intake.address}`)
+  if (assignment.address) {
+    lines.push(`כתובת: ${assignment.address}`)
   }
 
-  if (intake?.kashrut) {
-    lines.push(`כשרות: ${intake.kashrut}`)
+  if (assignment.household_size || assignment.children_ages) {
+    lines.push(
+      `נפשות: ${assignment.household_size || "לא צוין"}${assignment.children_ages ? `, גילאי הילדים: ${assignment.children_ages}` : ""}`,
+    )
   }
 
-  if (intake?.special_requirements) {
-    lines.push(`דרישות מיוחדות: ${intake.special_requirements}`)
+  if (assignment.kashrut) {
+    lines.push(`כשרות: ${assignment.kashrut}`)
   }
 
-  if (contactPhone) {
-    lines.push(`טלפון ליצירת קשר: ${contactPhone}`)
+  if (assignment.special_requirements) {
+    lines.push(`דרישות מיוחדות: ${assignment.special_requirements}`)
+  }
+
+  if (assignment.contact_phone) {
+    lines.push(`טלפון ליצירת קשר: ${assignment.contact_phone}`)
   }
 
   return lines.join("\n")
@@ -997,8 +999,7 @@ export function AdminDashboardPage() {
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const isSignupReady = selectedTrain?.status === "published"
   const shareableMotherPhone = selectedTrain?.intake_form?.contact_phone ?? selectedTrain?.contact_phone ?? null
-  const volunteerReminderMessage =
-    selectedTrain && selectedDay ? buildVolunteerReminderMessage(selectedTrain, selectedDay) : null
+  const todayVolunteerReminders = overviewQuery.data?.today_reminders ?? []
   const confirmActionConfig =
     selectedTrain && confirmAction
       ? {
@@ -1936,6 +1937,65 @@ export function AdminDashboardPage() {
         </section>
       ) : null}
 
+      {activeTab === "reminders" ? (
+        <section className="info-grid">
+          <article className="panel">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">תזכורות של היום</p>
+                <h3>לחיצה על מבשלת פותחת וואטסאפ עם הודעה מוכנה</h3>
+              </div>
+              <span className="muted">{todayVolunteerReminders.length} להיום</span>
+            </div>
+
+            {overviewQuery.isLoading ? <p className="muted">טוען תזכורות...</p> : null}
+
+            {!overviewQuery.isLoading && !todayVolunteerReminders.length ? (
+              <p className="muted">אין כרגע מבשלות משובצות להיום.</p>
+            ) : null}
+
+            {todayVolunteerReminders.length ? (
+              <div className="reminder-list">
+                {todayVolunteerReminders.map((assignment) => (
+                  <button
+                    key={`${assignment.family_title}-${assignment.date}-${assignment.phone}`}
+                    className="assignment-card assignment-card--reminder"
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        buildWhatsAppLink(buildVolunteerReminderMessage(assignment), assignment.phone),
+                        "_blank",
+                        "noopener,noreferrer",
+                      )
+                    }}
+                  >
+                    <div className="assignment-card__content">
+                      <strong>{assignment.volunteer_name}</strong>
+                      <p className="muted">
+                        {assignment.family_title}
+                        {assignment.mother_name ? ` · ${assignment.mother_name}` : ""}
+                      </p>
+                      <p className="muted">
+                        עד {assignment.delivery_deadline}
+                        {assignment.meal_type ? ` · ${assignment.meal_type}` : ""}
+                      </p>
+                      {assignment.address ? <p className="muted">כתובת: {assignment.address}</p> : null}
+                    </div>
+                    <div className="assignment-card__meta assignment-card__meta--reminder">
+                      <span>{assignment.phone}</span>
+                      <span className="assignment-card__action">
+                        <WhatsAppIcon className="button__icon button__icon--whatsapp" />
+                        פתיחת תזכורת
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </article>
+        </section>
+      ) : null}
+
       {activeTab === "admins" ? (
         <section className="info-grid">
           <article className="panel">
@@ -2063,24 +2123,6 @@ export function AdminDashboardPage() {
                 <p>{selectedDay.signup.phone}</p>
                 {selectedDay.signup.meal_type ? <p>{selectedDay.signup.meal_type}</p> : null}
                 {selectedDay.signup.note ? <p>{selectedDay.signup.note}</p> : null}
-                {volunteerReminderMessage ? (
-                  <div className="signup-preview__actions">
-                    <button
-                      className="button button--ghost button--share-action"
-                      type="button"
-                      onClick={() => {
-                        window.open(
-                          buildWhatsAppLink(volunteerReminderMessage, selectedDay.signup?.phone ?? null),
-                          "_blank",
-                          "noopener,noreferrer",
-                        )
-                      }}
-                    >
-                      <WhatsAppIcon className="button__icon button__icon--whatsapp" />
-                      שליחת תזכורת בוואטסאפ
-                    </button>
-                  </div>
-                ) : null}
                 <p className="muted">אם תשני את היום ל"פנוי" או ל"לא צריך", ההרשמה תבוטל אוטומטית.</p>
               </div>
             ) : (
