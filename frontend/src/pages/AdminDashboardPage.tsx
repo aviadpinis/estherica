@@ -23,6 +23,7 @@ import type {
   AdminAccount,
   AdminOverview,
   AdminUpcomingAssignment,
+  BabyType,
   BabyTone,
   MealDay,
   MealTrainDetail,
@@ -179,13 +180,38 @@ function buildSignupShareMessage(train: MealTrainDetail, options?: { includeLink
   return `מפנקות את ${train.family_title}\nמזל טוב ${babyCopy.blessing}\nלהשתבצות לארוחה:${includeLink ? `\n${buildPublicLink(train.public_token)}` : ""}`
 }
 
+function getBirthReminderStatement(babyType: BabyType | null, isTwins: boolean) {
+  if (isTwins) {
+    if (babyType === "boy") {
+      return "נולדו להם תאומים."
+    }
+
+    if (babyType === "girl") {
+      return "נולדו להן תאומות."
+    }
+
+    return "נולדו להם בן ובת."
+  }
+
+  if (babyType === "boy") {
+    return "נולד להם בן."
+  }
+
+  if (babyType === "girl") {
+    return "נולדה להם בת."
+  }
+
+  return "נולד להם תינוק חדש."
+}
+
 function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment) {
-  const babyCopy = getBabyCopy(assignment.baby_type, assignment.is_twins)
-  const motherLabel = assignment.mother_name || assignment.family_title
+  const familyLabel = assignment.mother_name
+    ? `${assignment.family_title} · ${assignment.mother_name}`
+    : assignment.family_title
   const lines = [
     `שלום ${assignment.volunteer_name},`,
-    `מתזכרת שהיום את מפנקת את ${motherLabel}.`,
-    `מזל טוב ${babyCopy.blessing}.`,
+    `מתזכרת שהיום את מפנקת את משפחת ${familyLabel}.`,
+    getBirthReminderStatement(assignment.baby_type, assignment.is_twins),
     `להביא עד ${assignment.delivery_deadline}.`,
   ]
 
@@ -1939,12 +1965,9 @@ export function AdminDashboardPage() {
 
       {activeTab === "reminders" ? (
         <section className="info-grid">
-          <article className="panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">תזכורות של היום</p>
-                <h3>לחיצה על מבשלת פותחת וואטסאפ עם הודעה מוכנה</h3>
-              </div>
+          <article className="panel panel--compact">
+            <div className="reminder-header">
+              <p className="eyebrow">תזכורות של היום</p>
               <span className="muted">{todayVolunteerReminders.length} להיום</span>
             </div>
 
@@ -1959,7 +1982,7 @@ export function AdminDashboardPage() {
                 {todayVolunteerReminders.map((assignment) => (
                   <button
                     key={`${assignment.family_title}-${assignment.date}-${assignment.phone}`}
-                    className="assignment-card assignment-card--reminder"
+                    className="reminder-row"
                     type="button"
                     onClick={() => {
                       window.open(
@@ -1969,25 +1992,18 @@ export function AdminDashboardPage() {
                       )
                     }}
                   >
-                    <div className="assignment-card__content">
+                    <span className="reminder-row__text">
                       <strong>{assignment.volunteer_name}</strong>
-                      <p className="muted">
-                        {assignment.family_title}
-                        {assignment.mother_name ? ` · ${assignment.mother_name}` : ""}
-                      </p>
-                      <p className="muted">
-                        עד {assignment.delivery_deadline}
-                        {assignment.meal_type ? ` · ${assignment.meal_type}` : ""}
-                      </p>
-                      {assignment.address ? <p className="muted">כתובת: {assignment.address}</p> : null}
-                    </div>
-                    <div className="assignment-card__meta assignment-card__meta--reminder">
-                      <span>{assignment.phone}</span>
-                      <span className="assignment-card__action">
+                      <span> - </span>
+                      <span>משפחת {assignment.family_title}</span>
+                      {assignment.mother_name ? <span> * {assignment.mother_name}</span> : null}
+                    </span>
+                    <span className="reminder-row__action" aria-hidden="true">
+                      <span className="reminder-row__time">עד {assignment.delivery_deadline}</span>
+                      <span className="reminder-row__icon">
                         <WhatsAppIcon className="button__icon button__icon--whatsapp" />
-                        פתיחת תזכורת
                       </span>
-                    </div>
+                    </span>
                   </button>
                 ))}
               </div>

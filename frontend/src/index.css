@@ -426,11 +426,13 @@ img {
   border: 1px solid var(--stroke);
   background: rgba(255, 255, 255, 0.58);
   color: var(--ink);
-  border-radius: 999px;
-  padding: 0.85rem 1.2rem;
+  border-radius: 16px;
+  padding: 0.85rem 0.8rem;
   font-weight: 700;
   white-space: normal;
-  min-height: 56px;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  min-height: 58px;
   text-align: center;
 }
 
@@ -969,6 +971,66 @@ img {
   gap: 8px;
   font-weight: 700;
   color: var(--ink);
+}
+
+.panel--compact {
+  padding: 18px 20px;
+}
+
+.reminder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.reminder-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--stroke);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.56);
+  padding: 12px 14px;
+  text-align: right;
+  cursor: pointer;
+}
+
+.reminder-row:hover {
+  border-color: rgba(37, 211, 102, 0.32);
+  background: rgba(37, 211, 102, 0.06);
+}
+
+.reminder-row__text {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.reminder-row__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.reminder-row__time {
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.reminder-row__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(37, 211, 102, 0.12);
 }
 
 .leaderboard-item__rank {
@@ -1742,12 +1804,13 @@ button.calendar-card {
   }
 
   .admin-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
   .admin-tabs__button {
-    padding: 0.72rem 0.45rem;
-    font-size: 0.9rem;
+    padding: 0.72rem 0.55rem;
+    font-size: 0.88rem;
   }
 
   .section-tabs {
@@ -1787,6 +1850,23 @@ button.calendar-card {
   .assignment-card__meta {
     justify-items: start;
     text-align: right;
+  }
+
+  .reminder-header,
+  .reminder-row {
+    align-items: stretch;
+  }
+
+  .reminder-header {
+    flex-direction: column;
+  }
+
+  .reminder-row {
+    flex-direction: column;
+  }
+
+  .reminder-row__action {
+    justify-content: space-between;
   }
 
   .landing,
