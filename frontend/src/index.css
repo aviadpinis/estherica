@@ -1046,6 +1046,13 @@ img {
   background: rgba(23, 18, 15, 0.05);
 }
 
+.signup-preview__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+
 .feedback {
   border-radius: 18px;
   padding: 14px 18px;
