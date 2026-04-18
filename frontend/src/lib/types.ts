@@ -226,6 +226,7 @@ export interface AdminOverview {
   total_assigned_days: number
   upcoming_assignments: AdminUpcomingAssignment[]
   today_reminders: AdminUpcomingAssignment[]
+  reminder_assignments: AdminUpcomingAssignment[]
   volunteer_stats: AdminVolunteerStats[]
   attention_trains: AdminAttentionTrain[]
 }

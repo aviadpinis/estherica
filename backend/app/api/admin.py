@@ -169,8 +169,10 @@ def get_admin_overview(
     summaries = [_build_summary(train) for train in trains]
     summary_by_id = {summary.id: summary for summary in summaries}
     today = _today_in_project_timezone()
+    reminder_window_start = date.fromordinal(today.toordinal() - 1)
     upcoming_assignments: list[AdminUpcomingAssignment] = []
     today_reminders: list[AdminUpcomingAssignment] = []
+    reminder_assignments: list[AdminUpcomingAssignment] = []
     volunteer_bucket: dict[str, AdminVolunteerStats] = {}
     attention_trains: list[AdminAttentionTrain] = []
 
@@ -221,6 +223,9 @@ def get_admin_overview(
             if day.date == today:
                 today_reminders.append(assignment)
 
+            if not summary.is_archived and day.date >= reminder_window_start:
+                reminder_assignments.append(assignment)
+
             bucket_key = signup.volunteer_key or f"legacy::{signup.volunteer_name}::{signup.phone}"
             entry = volunteer_bucket.get(bucket_key)
             if entry is None:
@@ -243,6 +248,7 @@ def get_admin_overview(
 
     upcoming_assignments.sort(key=lambda item: (item.date, item.delivery_deadline, item.family_title))
     today_reminders.sort(key=lambda item: (item.delivery_deadline, item.family_title, item.volunteer_name))
+    reminder_assignments.sort(key=lambda item: (item.date, item.delivery_deadline, item.family_title, item.volunteer_name))
     attention_trains.sort(
         key=lambda item: (
             0 if item.urgent_open_days > 0 else 1,
@@ -266,6 +272,7 @@ def get_admin_overview(
         total_assigned_days=sum(summary.assigned_days for summary in summaries if not summary.is_archived),
         upcoming_assignments=upcoming_assignments[:12],
         today_reminders=today_reminders,
+        reminder_assignments=reminder_assignments,
         volunteer_stats=volunteer_stats[:8],
         attention_trains=attention_trains[:6],
     )

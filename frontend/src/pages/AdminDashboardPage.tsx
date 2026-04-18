@@ -10,7 +10,7 @@ import { PageShell } from "../components/PageShell"
 import { apiRequest, ApiError } from "../lib/api"
 import { useAuth } from "../lib/auth"
 import { getBabyCopy, getBabyTone, getBirthChoice, getTwinsChoice, resolveBirthSelection, type BirthChoice, type TwinsChoice } from "../lib/baby"
-import { formatDatePair, getLocalTodayIso } from "../lib/date"
+import { formatDatePair, getLocalTodayIso, shiftIsoDate } from "../lib/date"
 import {
   clampScheduleStartDate,
   getDefaultScheduleStartDate,
@@ -204,13 +204,25 @@ function getBirthReminderStatement(babyType: BabyType | null, isTwins: boolean) 
   return "נולד להם תינוק חדש."
 }
 
-function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment) {
+function getReminderLeadSentence(assignmentDate: string, todayIso: string, familyLabel: string) {
+  if (assignmentDate === todayIso) {
+    return `מתזכרת שהיום את מפנקת את ${familyLabel}.`
+  }
+
+  if (assignmentDate === shiftIsoDate(todayIso, 1)) {
+    return `מתזכרת שמחר את מפנקת את ${familyLabel}.`
+  }
+
+  return `מתזכרת שבתאריך ${formatDatePair(assignmentDate).short} את מפנקת את ${familyLabel}.`
+}
+
+function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment, todayIso: string) {
   const familyLabel = assignment.mother_name
     ? `${assignment.family_title} · ${assignment.mother_name}`
     : assignment.family_title
   const lines = [
     `שלום ${assignment.volunteer_name},`,
-    `מתזכרת שהיום את מפנקת את משפחת ${familyLabel}.`,
+    getReminderLeadSentence(assignment.date, todayIso, familyLabel),
     getBirthReminderStatement(assignment.baby_type, assignment.is_twins),
     `להביא עד ${assignment.delivery_deadline}.`,
   ]
@@ -567,6 +579,7 @@ export function AdminDashboardPage() {
   const queryClient = useQueryClient()
   const todayIso = getLocalTodayIso()
   const [activeTab, setActiveTab] = useState<AdminTab>("cases")
+  const [selectedReminderDate, setSelectedReminderDate] = useState(todayIso)
   const [activeCaseTab, setActiveCaseTab] = useState<CaseDetailTab>("summary")
   const [selectedTrainId, setSelectedTrainId] = useState<number | null>(null)
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null)
@@ -1025,7 +1038,9 @@ export function AdminDashboardPage() {
   const selectedDayLabels = selectedDay ? formatDatePair(selectedDay.date) : null
   const isSignupReady = selectedTrain?.status === "published"
   const shareableMotherPhone = selectedTrain?.intake_form?.contact_phone ?? selectedTrain?.contact_phone ?? null
-  const todayVolunteerReminders = overviewQuery.data?.today_reminders ?? []
+  const reminderAssignments = overviewQuery.data?.reminder_assignments ?? []
+  const reminderDateLabels = formatDatePair(selectedReminderDate)
+  const filteredReminderAssignments = reminderAssignments.filter((assignment) => assignment.date === selectedReminderDate)
   const confirmActionConfig =
     selectedTrain && confirmAction
       ? {
@@ -1967,26 +1982,52 @@ export function AdminDashboardPage() {
         <section className="info-grid">
           <article className="panel panel--compact">
             <div className="reminder-header">
-              <p className="eyebrow">תזכורות של היום</p>
-              <span className="muted">{todayVolunteerReminders.length} להיום</span>
+              <p className="eyebrow">תזכורות למבשלות</p>
+              <span className="muted">{filteredReminderAssignments.length} ליום הנבחר</span>
+            </div>
+
+            <div className="reminder-date-picker" aria-label="בחירת יום לתזכורת">
+              <button
+                className="reminder-date-picker__arrow"
+                type="button"
+                aria-label="יום קודם"
+                onClick={() => setSelectedReminderDate((current) => shiftIsoDate(current, -1))}
+              >
+                ›
+              </button>
+
+              <div className="reminder-date-picker__labels">
+                <strong>{reminderDateLabels.hebrewCalendar}</strong>
+                <span>{reminderDateLabels.hebrew}</span>
+                <small>{reminderDateLabels.english}</small>
+              </div>
+
+              <button
+                className="reminder-date-picker__arrow"
+                type="button"
+                aria-label="יום הבא"
+                onClick={() => setSelectedReminderDate((current) => shiftIsoDate(current, 1))}
+              >
+                ‹
+              </button>
             </div>
 
             {overviewQuery.isLoading ? <p className="muted">טוען תזכורות...</p> : null}
 
-            {!overviewQuery.isLoading && !todayVolunteerReminders.length ? (
-              <p className="muted">אין כרגע מבשלות משובצות להיום.</p>
+            {!overviewQuery.isLoading && !filteredReminderAssignments.length ? (
+              <p className="muted">אין כרגע מבשלות שצריכות תזכורת ביום הזה.</p>
             ) : null}
 
-            {todayVolunteerReminders.length ? (
+            {filteredReminderAssignments.length ? (
               <div className="reminder-list">
-                {todayVolunteerReminders.map((assignment) => (
+                {filteredReminderAssignments.map((assignment) => (
                   <button
                     key={`${assignment.family_title}-${assignment.date}-${assignment.phone}`}
                     className="reminder-row"
                     type="button"
                     onClick={() => {
                       window.open(
-                        buildWhatsAppLink(buildVolunteerReminderMessage(assignment), assignment.phone),
+                        buildWhatsAppLink(buildVolunteerReminderMessage(assignment, todayIso), assignment.phone),
                         "_blank",
                         "noopener,noreferrer",
                       )

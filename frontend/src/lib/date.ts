@@ -5,6 +5,12 @@ const hebrewFormatter = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
 })
 
+const hebrewCalendarFormatter = new Intl.DateTimeFormat("he-IL-u-ca-hebrew", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+})
+
 const englishFormatter = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
   year: "numeric",
@@ -33,9 +39,19 @@ export function formatDatePair(value: string) {
   const date = new Date(`${value}T12:00:00`)
   return {
     hebrew: hebrewFormatter.format(date),
+    hebrewCalendar: hebrewCalendarFormatter.format(date),
     english: englishFormatter.format(date),
     short: shortDateFormatter.format(date),
   }
+}
+
+export function shiftIsoDate(value: string, offset: number) {
+  const date = new Date(`${value}T12:00:00`)
+  date.setDate(date.getDate() + offset)
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
 }
 
 export function formatDateTimeLabel(value: string) {
