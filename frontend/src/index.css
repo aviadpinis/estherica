@@ -1030,12 +1030,6 @@ img {
   background: rgba(255, 255, 255, 0.56);
   padding: 12px 14px;
   text-align: right;
-  cursor: pointer;
-}
-
-.reminder-row:disabled {
-  cursor: default;
-  opacity: 0.82;
 }
 
 .reminder-row:hover {
@@ -1062,9 +1056,9 @@ img {
 }
 
 .reminder-row__action {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
   flex: none;
 }
 
@@ -1081,6 +1075,34 @@ img {
   display: grid;
   place-items: center;
   background: rgba(37, 211, 102, 0.12);
+}
+
+.reminder-row__action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(37, 211, 102, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  padding: 0.5rem 0.9rem;
+  font-weight: 700;
+}
+
+.reminder-row__action-button--secondary {
+  border-color: var(--stroke);
+}
+
+.reminder-row__manual {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.reminder-row__warning {
+  color: var(--muted);
+  font-size: 0.85rem;
+  max-width: 220px;
 }
 
 .leaderboard-item__rank {
@@ -1921,7 +1943,17 @@ button.calendar-card {
   }
 
   .reminder-row__action {
-    justify-content: space-between;
+    justify-items: stretch;
+    width: 100%;
+  }
+
+  .reminder-row__manual,
+  .reminder-row__action-button {
+    width: 100%;
+  }
+
+  .reminder-row__warning {
+    max-width: none;
   }
 
   .landing,
