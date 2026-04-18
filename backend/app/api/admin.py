@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.dependencies import get_current_admin
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models.entities import Admin, BabyType, MealDay, MealDayStatus, MealTrain, MealTrainStatus, Signup
+from app.models.entities import Admin, BabyType, MealDay, MealDayStatus, MealTrain, MealTrainStatus, Signup, SignupStatus
 from app.schemas.meal_trains import (
     AdminAttentionTrain,
     AdminOverviewResponse,
@@ -446,6 +446,34 @@ def update_meal_day(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid day status.") from exc
         if meal_day.status != MealDayStatus.assigned and meal_day.signup is not None:
             db.delete(meal_day.signup)
+            meal_day.volunteer_reminded_at = None
+            meal_day.volunteer_reminded_by = None
+
+    volunteer_name = updates.get("volunteer_name")
+    volunteer_phone = updates.get("volunteer_phone")
+    if meal_day.status == MealDayStatus.assigned and ("volunteer_name" in updates or "volunteer_phone" in updates):
+        cleaned_name = volunteer_name.strip() if volunteer_name else ""
+        cleaned_phone = volunteer_phone.strip() if volunteer_phone else ""
+
+        if meal_day.signup is None:
+            if not cleaned_name:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="צריך למלא שם מבשלת.")
+
+            meal_day.signup = Signup(
+                volunteer_name=cleaned_name,
+                phone=cleaned_phone,
+                email="",
+                meal_type=None,
+                note=None,
+                status=SignupStatus.active,
+            )
+        else:
+            if "volunteer_name" in updates:
+                if not cleaned_name:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="צריך למלא שם מבשלת.")
+                meal_day.signup.volunteer_name = cleaned_name
+            if "volunteer_phone" in updates:
+                meal_day.signup.phone = cleaned_phone
 
     for field in ("delivery_deadline", "admin_note"):
         if field in updates:

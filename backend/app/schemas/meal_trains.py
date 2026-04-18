@@ -148,6 +148,8 @@ class MealDayUpdate(BaseModel):
     delivery_deadline: str | None = None
     admin_note: str | None = None
     status: str | None = None
+    volunteer_name: str | None = None
+    volunteer_phone: str | None = None
 
 
 class IntakeDayChoice(BaseModel):

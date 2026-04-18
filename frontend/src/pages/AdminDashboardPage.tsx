@@ -102,6 +102,8 @@ interface DayDraft {
   status: MealDay["status"]
   delivery_deadline: string
   admin_note: string
+  volunteer_name: string
+  volunteer_phone: string
 }
 
 interface TabOption {
@@ -788,6 +790,8 @@ export function AdminDashboardPage() {
         status: day.status,
         delivery_deadline: day.delivery_deadline,
         admin_note: day.admin_note ?? "",
+        volunteer_name: day.signup?.volunteer_name ?? "",
+        volunteer_phone: day.signup?.phone ?? "",
       }
     })
     setDayDrafts(nextDrafts)
@@ -2264,7 +2268,7 @@ export function AdminDashboardPage() {
                 <p>
                   <strong>{selectedDay.signup.volunteer_name}</strong>
                 </p>
-                <p>{selectedDay.signup.phone}</p>
+                <p>{selectedDay.signup.phone || "ללא פלאפון"}</p>
                 {selectedDay.signup.meal_type ? <p>{selectedDay.signup.meal_type}</p> : null}
                 {selectedDay.signup.note ? <p>{selectedDay.signup.note}</p> : null}
                 <p className="muted">אם תשני את היום ל"פנוי" או ל"לא צריך", ההרשמה תבוטל אוטומטית.</p>
@@ -2329,6 +2333,46 @@ export function AdminDashboardPage() {
                   }
                 />
               </label>
+
+              {selectedDraft.status === "assigned" ? (
+                <div className="field-row">
+                  <label className="field">
+                    <span>שם המבשלת</span>
+                    <input
+                      type="text"
+                      value={selectedDraft.volunteer_name}
+                      placeholder="חובה במצב תפוס"
+                      onChange={(event) =>
+                        setDayDrafts((current) => ({
+                          ...current,
+                          [selectedDay.id]: {
+                            ...selectedDraft,
+                            volunteer_name: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>פלאפון מבשלת</span>
+                    <input
+                      type="text"
+                      value={selectedDraft.volunteer_phone}
+                      placeholder="לא חובה"
+                      onChange={(event) =>
+                        setDayDrafts((current) => ({
+                          ...current,
+                          [selectedDay.id]: {
+                            ...selectedDraft,
+                            volunteer_phone: event.target.value,
+                          },
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              ) : null}
             </div>
 
             <div className="dialog-card__actions">
