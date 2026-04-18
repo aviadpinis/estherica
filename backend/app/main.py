@@ -6,6 +6,7 @@ from app.api.admin import router as admin_router
 from app.api.auth import router as auth_router
 from app.api.health import router as health_router
 from app.api.public import router as public_router
+from app.api.reminders import router as reminders_router
 from app.core.config import get_settings
 from app.core.encryption import encrypt_existing_rows
 from app.db.session import SessionLocal, engine
@@ -58,6 +59,15 @@ def ensure_schema() -> None:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE signups ADD COLUMN volunteer_key VARCHAR(64)"))
 
+    if "meal_days" in inspector.get_table_names():
+        columns = {column["name"] for column in inspector.get_columns("meal_days")}
+        if "volunteer_reminded_at" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE meal_days ADD COLUMN volunteer_reminded_at TIMESTAMP"))
+        if "volunteer_reminded_by" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE meal_days ADD COLUMN volunteer_reminded_by VARCHAR(160)"))
+
     if "intake_forms" in inspector.get_table_names():
         columns = {column["name"] for column in inspector.get_columns("intake_forms")}
         if "home_phone" not in columns:
@@ -89,3 +99,4 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(public_router)
+app.include_router(reminders_router)
