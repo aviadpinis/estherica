@@ -323,6 +323,7 @@ class AdminOverviewResponse(BaseModel):
     total_assigned_days: int
     upcoming_assignments: list[AdminUpcomingAssignment]
     today_reminders: list[AdminUpcomingAssignment]
+    reminder_assignments: list[AdminUpcomingAssignment]
     volunteer_stats: list[AdminVolunteerStats]
     attention_trains: list[AdminAttentionTrain]
 

@@ -985,6 +985,40 @@ img {
   margin-bottom: 10px;
 }
 
+.reminder-date-picker {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.reminder-date-picker__arrow {
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  min-height: 44px;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.reminder-date-picker__labels {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.reminder-date-picker__labels strong,
+.reminder-date-picker__labels span,
+.reminder-date-picker__labels small {
+  margin: 0;
+}
+
+.reminder-date-picker__labels small {
+  color: var(--muted);
+}
+
 .reminder-row {
   width: 100%;
   display: flex;
@@ -1859,6 +1893,11 @@ button.calendar-card {
 
   .reminder-header {
     flex-direction: column;
+  }
+
+  .reminder-date-picker {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 8px;
   }
 
   .reminder-row {
