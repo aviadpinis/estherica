@@ -252,6 +252,24 @@ function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment, toda
   return lines.join("\n")
 }
 
+function formatReminderTimestamp(value: string) {
+  const date = new Date(value)
+  const dateLabel = formatDatePair(value.slice(0, 10)).short
+  const timeLabel = new Intl.DateTimeFormat("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date)
+  return `${dateLabel} · ${timeLabel}`
+}
+
+function getReminderStatusText(assignment: AdminUpcomingAssignment) {
+  if (!assignment.volunteer_reminded_at || !assignment.volunteer_reminded_by) {
+    return "עדיין לא תוזכרה"
+  }
+
+  return `תוזכרה על ידי ${assignment.volunteer_reminded_by} · ${formatReminderTimestamp(assignment.volunteer_reminded_at)}`
+}
+
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -795,6 +813,21 @@ export function AdminDashboardPage() {
     },
   })
 
+  const markVolunteerReminderMutation = useMutation({
+    mutationFn: (mealDayId: number) =>
+      apiRequest<{ meal_day_id: number; volunteer_reminded_at: string; volunteer_reminded_by: string }>(
+        `/api/admin/meal-days/${mealDayId}/volunteer-reminder`,
+        {
+          method: "POST",
+        },
+        token,
+      ),
+    onSuccess: () => {
+      setFeedback("סימנו שהתזכורת נשלחה למבשלת.")
+      void queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
+    },
+  })
+
   const updateTrainMutation = useMutation({
     mutationFn: (values: EditTrainValues) =>
       apiRequest<MealTrainDetail>(
@@ -1028,6 +1061,7 @@ export function AdminDashboardPage() {
     (updateTrainMutation.error as ApiError | null)?.message ||
     (addDayMutation.error as ApiError | null)?.message ||
     (updateDayMutation.error as ApiError | null)?.message ||
+    (markVolunteerReminderMutation.error as ApiError | null)?.message ||
     (updateGiftMutation.error as ApiError | null)?.message ||
     (deleteTrainMutation.error as ApiError | null)?.message ||
     (trainsQuery.error as ApiError | null)?.message ||
@@ -2022,22 +2056,27 @@ export function AdminDashboardPage() {
               <div className="reminder-list">
                 {filteredReminderAssignments.map((assignment) => (
                   <button
-                    key={`${assignment.family_title}-${assignment.date}-${assignment.phone}`}
+                    key={`${assignment.meal_day_id}-${assignment.date}-${assignment.phone}`}
                     className="reminder-row"
                     type="button"
+                    disabled={markVolunteerReminderMutation.isPending}
                     onClick={() => {
                       window.open(
                         buildWhatsAppLink(buildVolunteerReminderMessage(assignment, todayIso), assignment.phone),
                         "_blank",
                         "noopener,noreferrer",
                       )
+                      markVolunteerReminderMutation.mutate(assignment.meal_day_id)
                     }}
                   >
                     <span className="reminder-row__text">
-                      <span>{assignment.volunteer_name}</span>
-                      <span> - </span>
-                      <span>{assignment.family_title}</span>
-                      {assignment.mother_name ? <span> · {assignment.mother_name}</span> : null}
+                      <span className="reminder-row__primary">
+                        <span>{assignment.volunteer_name}</span>
+                        <span> - </span>
+                        <span>{assignment.family_title}</span>
+                        {assignment.mother_name ? <span> · {assignment.mother_name}</span> : null}
+                      </span>
+                      <span className="reminder-row__secondary">{getReminderStatusText(assignment)}</span>
                     </span>
                     <span className="reminder-row__action" aria-hidden="true">
                       <span className="reminder-row__time">עד {assignment.delivery_deadline}</span>

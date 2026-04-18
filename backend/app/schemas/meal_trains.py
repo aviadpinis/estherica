@@ -279,6 +279,7 @@ class SignupCancelRequest(BaseModel):
 
 
 class AdminUpcomingAssignment(BaseModel):
+    meal_day_id: int
     date: date
     family_title: str
     mother_name: str | None
@@ -294,6 +295,8 @@ class AdminUpcomingAssignment(BaseModel):
     kashrut: str | None = None
     special_requirements: str | None = None
     contact_phone: str | None = None
+    volunteer_reminded_at: datetime | None = None
+    volunteer_reminded_by: str | None = None
 
 
 class AdminVolunteerStats(BaseModel):
@@ -326,6 +329,12 @@ class AdminOverviewResponse(BaseModel):
     reminder_assignments: list[AdminUpcomingAssignment]
     volunteer_stats: list[AdminVolunteerStats]
     attention_trains: list[AdminAttentionTrain]
+
+
+class VolunteerReminderMarkResponse(BaseModel):
+    meal_day_id: int
+    volunteer_reminded_at: datetime
+    volunteer_reminded_by: str
 
 
 class PublicBirthNoticeCreate(BaseModel):

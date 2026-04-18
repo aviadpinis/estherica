@@ -182,6 +182,7 @@ export interface AdminAccount {
 }
 
 export interface AdminUpcomingAssignment {
+  meal_day_id: number
   date: string
   family_title: string
   mother_name: string | null
@@ -197,6 +198,8 @@ export interface AdminUpcomingAssignment {
   kashrut: string | null
   special_requirements: string | null
   contact_phone: string | null
+  volunteer_reminded_at: string | null
+  volunteer_reminded_by: string | null
 }
 
 export interface AdminVolunteerStats {

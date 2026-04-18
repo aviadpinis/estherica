@@ -20,6 +20,7 @@ from app.schemas.meal_trains import (
     MealTrainDetail,
     MealTrainSummary,
     MealTrainUpdate,
+    VolunteerReminderMarkResponse,
 )
 from app.services.meal_trains import build_default_days, generate_token, sync_default_days, validate_schedule_window
 
@@ -169,7 +170,7 @@ def get_admin_overview(
     summaries = [_build_summary(train) for train in trains]
     summary_by_id = {summary.id: summary for summary in summaries}
     today = _today_in_project_timezone()
-    reminder_window_start = date.fromordinal(today.toordinal() - 1)
+    reminder_window_start = date.fromordinal(today.toordinal() - 30)
     upcoming_assignments: list[AdminUpcomingAssignment] = []
     today_reminders: list[AdminUpcomingAssignment] = []
     reminder_assignments: list[AdminUpcomingAssignment] = []
@@ -200,6 +201,7 @@ def get_admin_overview(
 
             intake = train.intake_form
             assignment = AdminUpcomingAssignment(
+                meal_day_id=day.id,
                 date=day.date,
                 family_title=train.family_title,
                 mother_name=train.mother_name,
@@ -215,6 +217,8 @@ def get_admin_overview(
                 kashrut=intake.kashrut if intake else None,
                 special_requirements=intake.special_requirements if intake else None,
                 contact_phone=(intake.contact_phone if intake else None) or train.contact_phone,
+                volunteer_reminded_at=day.volunteer_reminded_at,
+                volunteer_reminded_by=day.volunteer_reminded_by,
             )
 
             if day.date >= today:
@@ -223,7 +227,7 @@ def get_admin_overview(
             if day.date == today:
                 today_reminders.append(assignment)
 
-            if not summary.is_archived and day.date >= reminder_window_start:
+            if day.date >= reminder_window_start:
                 reminder_assignments.append(assignment)
 
             bucket_key = signup.volunteer_key or f"legacy::{signup.volunteer_name}::{signup.phone}"
@@ -450,6 +454,31 @@ def update_meal_day(
     db.commit()
     db.refresh(meal_day)
     return MealDayResponse.model_validate(meal_day)
+
+
+@router.post("/meal-days/{day_id}/volunteer-reminder", response_model=VolunteerReminderMarkResponse)
+def mark_volunteer_reminder_sent(
+    day_id: int,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> VolunteerReminderMarkResponse:
+    meal_day = db.query(MealDay).options(joinedload(MealDay.signup)).filter(MealDay.id == day_id).first()
+    if meal_day is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Day not found.")
+    if meal_day.signup is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No volunteer is assigned to this day.")
+
+    reminder_label = admin.full_name.strip() if admin.full_name else admin.email
+    meal_day.volunteer_reminded_at = datetime.now(UTC)
+    meal_day.volunteer_reminded_by = reminder_label
+    db.commit()
+    db.refresh(meal_day)
+
+    return VolunteerReminderMarkResponse(
+        meal_day_id=meal_day.id,
+        volunteer_reminded_at=meal_day.volunteer_reminded_at,
+        volunteer_reminded_by=meal_day.volunteer_reminded_by or reminder_label,
+    )
 
 
 @router.delete("/meal-days/{day_id}", status_code=status.HTTP_204_NO_CONTENT)

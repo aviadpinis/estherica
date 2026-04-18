@@ -50,6 +50,17 @@ class SignupStatus(str, enum.Enum):
     cancelled = "cancelled"
 
 
+class ReminderChannel(str, enum.Enum):
+    sms = "sms"
+
+
+class ReminderDispatchStatus(str, enum.Enum):
+    pending = "pending"
+    claimed = "claimed"
+    sent = "sent"
+    failed = "failed"
+
+
 class MealTrain(Base):
     __tablename__ = "meal_trains"
 
@@ -129,6 +140,8 @@ class MealDay(Base):
     delivery_deadline: Mapped[str] = mapped_column(String(5), nullable=False)
     display_order: Mapped[int] = mapped_column(Integer, nullable=False)
     admin_note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    volunteer_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    volunteer_reminded_by: Mapped[str | None] = mapped_column(String(160), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -138,6 +151,11 @@ class MealDay(Base):
         back_populates="meal_day",
         cascade="all, delete-orphan",
         uselist=False,
+    )
+    reminder_dispatches: Mapped[list[ReminderDispatch]] = relationship(
+        back_populates="meal_day",
+        cascade="all, delete-orphan",
+        order_by="ReminderDispatch.created_at",
     )
 
 
@@ -160,3 +178,41 @@ class Signup(Base):
     )
 
     meal_day: Mapped[MealDay] = relationship(back_populates="signup")
+
+
+class ReminderDispatch(Base):
+    __tablename__ = "reminder_dispatches"
+    __table_args__ = (
+        UniqueConstraint("meal_day_id", "scheduled_for", "channel", name="uq_reminder_dispatch_per_day_channel"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    meal_day_id: Mapped[int] = mapped_column(ForeignKey("meal_days.id"), nullable=False)
+    scheduled_for: Mapped[date] = mapped_column(Date, nullable=False)
+    channel: Mapped[ReminderChannel] = mapped_column(
+        Enum(ReminderChannel),
+        default=ReminderChannel.sms,
+        nullable=False,
+    )
+    status: Mapped[ReminderDispatchStatus] = mapped_column(
+        Enum(ReminderDispatchStatus),
+        default=ReminderDispatchStatus.pending,
+        nullable=False,
+    )
+    target_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    target_phone: Mapped[str] = mapped_column(String(40), nullable=False)
+    message_text: Mapped[str] = mapped_column(Text, nullable=False)
+    claimed_by_device: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    provider_message_id: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    meal_day: Mapped[MealDay] = relationship(back_populates="reminder_dispatches")
