@@ -252,6 +252,27 @@ function buildVolunteerReminderMessage(assignment: AdminUpcomingAssignment, toda
   return lines.join("\n")
 }
 
+async function copyTextToClipboard(value: string) {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  if (typeof document === "undefined") {
+    throw new Error("Clipboard is not available.")
+  }
+
+  const textarea = document.createElement("textarea")
+  textarea.value = value
+  textarea.style.position = "fixed"
+  textarea.style.opacity = "0"
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  document.execCommand("copy")
+  document.body.removeChild(textarea)
+}
+
 function formatReminderTimestamp(value: string) {
   const date = new Date(value)
   const dateLabel = formatDatePair(value.slice(0, 10)).short
@@ -2055,19 +2076,9 @@ export function AdminDashboardPage() {
             {filteredReminderAssignments.length ? (
               <div className="reminder-list">
                 {filteredReminderAssignments.map((assignment) => (
-                  <button
+                  <article
                     key={`${assignment.meal_day_id}-${assignment.date}-${assignment.phone}`}
                     className="reminder-row"
-                    type="button"
-                    disabled={markVolunteerReminderMutation.isPending}
-                    onClick={() => {
-                      window.open(
-                        buildWhatsAppLink(buildVolunteerReminderMessage(assignment, todayIso), assignment.phone),
-                        "_blank",
-                        "noopener,noreferrer",
-                      )
-                      markVolunteerReminderMutation.mutate(assignment.meal_day_id)
-                    }}
                   >
                     <span className="reminder-row__text">
                       <span className="reminder-row__primary">
@@ -2078,13 +2089,50 @@ export function AdminDashboardPage() {
                       </span>
                       <span className="reminder-row__secondary">{getReminderStatusText(assignment)}</span>
                     </span>
-                    <span className="reminder-row__action" aria-hidden="true">
+                    <span className="reminder-row__action">
                       <span className="reminder-row__time">עד {assignment.delivery_deadline}</span>
-                      <span className="reminder-row__icon">
-                        <WhatsAppIcon className="button__icon button__icon--whatsapp" />
-                      </span>
+                      {normalizeWhatsAppPhone(assignment.phone) ? (
+                        <button
+                          className="reminder-row__action-button"
+                          type="button"
+                          disabled={markVolunteerReminderMutation.isPending}
+                          onClick={() => {
+                            window.open(
+                              buildWhatsAppLink(buildVolunteerReminderMessage(assignment, todayIso), assignment.phone),
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                            markVolunteerReminderMutation.mutate(assignment.meal_day_id)
+                          }}
+                        >
+                          <span className="reminder-row__icon" aria-hidden="true">
+                            <WhatsAppIcon className="button__icon button__icon--whatsapp" />
+                          </span>
+                          וואטסאפ
+                        </button>
+                      ) : (
+                        <div className="reminder-row__manual">
+                          <span className="reminder-row__warning">לא הוזן פלאפון, אי אפשר לתזכר בוואטסאפ.</span>
+                          <button
+                            className="reminder-row__action-button reminder-row__action-button--secondary"
+                            type="button"
+                            disabled={markVolunteerReminderMutation.isPending}
+                            onClick={async () => {
+                              try {
+                                await copyTextToClipboard(buildVolunteerReminderMessage(assignment, todayIso))
+                                setFeedback("ההודעה הועתקה. אפשר להדביק ולשלוח ידנית.")
+                                markVolunteerReminderMutation.mutate(assignment.meal_day_id)
+                              } catch {
+                                setFeedback("לא הצלחנו להעתיק את ההודעה. אפשר לנסות שוב.")
+                              }
+                            }}
+                          >
+                            העתקת הודעה
+                          </button>
+                        </div>
+                      )}
                     </span>
-                  </button>
+                  </article>
                 ))}
               </div>
             ) : null}
