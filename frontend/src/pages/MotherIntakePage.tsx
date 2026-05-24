@@ -113,6 +113,7 @@ function buildEditableDays(
       display_order: visibleDays.length + 1,
       admin_note: null,
       signup: null,
+      global_event: null,
     })
   }
 

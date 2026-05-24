@@ -19,6 +19,17 @@ class SignupResponse(BaseModel):
     created_at: datetime
 
 
+class GlobalCalendarEventResponse(BaseModel):
+    id: int
+    date: date
+    title: str
+    note: str | None
+    blocks_meals: bool
+    created_by: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class MealDayResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,6 +41,7 @@ class MealDayResponse(BaseModel):
     display_order: int
     admin_note: str | None
     signup: SignupResponse | None = None
+    global_event: GlobalCalendarEventResponse | None = None
 
 
 class IntakeFormResponse(BaseModel):
@@ -152,6 +164,13 @@ class MealDayUpdate(BaseModel):
     status: str | None = None
     volunteer_name: str | None = None
     volunteer_phone: str | None = None
+
+
+class GlobalCalendarEventCreate(BaseModel):
+    date: date
+    title: str = Field(min_length=2)
+    note: str | None = None
+    blocks_meals: bool = True
 
 
 class IntakeDayChoice(BaseModel):

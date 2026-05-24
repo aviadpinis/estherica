@@ -91,10 +91,18 @@ const createAdminSchema = z.object({
   password: z.string().min(8, "צריך סיסמה של לפחות 8 תווים"),
 })
 
+const globalEventSchema = z.object({
+  date: z.string().min(1, "צריך תאריך"),
+  title: z.string().min(2, "צריך שם לאירוע"),
+  note: z.string().optional(),
+  blocks_meals: z.boolean(),
+})
+
 type CreateTrainValues = z.infer<typeof createTrainSchema>
 type EditTrainValues = z.infer<typeof editTrainSchema>
 type AddDayValues = z.infer<typeof addDaySchema>
 type CreateAdminValues = z.infer<typeof createAdminSchema>
+type GlobalEventValues = z.infer<typeof globalEventSchema>
 
 type AdminTab = "cases" | "new" | "reminders" | "stats" | "admins"
 type CaseDetailTab = "summary" | "links" | "calendar" | "details"
@@ -685,6 +693,16 @@ export function AdminDashboardPage() {
     },
   })
 
+  const globalEventForm = useForm<GlobalEventValues>({
+    resolver: zodResolver(globalEventSchema),
+    defaultValues: {
+      date: todayIso,
+      title: "",
+      note: "",
+      blocks_meals: true,
+    },
+  })
+
   useEffect(() => {
     createForm.register("baby_type")
     createForm.register("is_twins")
@@ -794,6 +812,13 @@ export function AdminDashboardPage() {
       admin_note: "",
     })
 
+    globalEventForm.reset({
+      date: train.start_date,
+      title: "",
+      note: "",
+      blocks_meals: true,
+    })
+
     const nextDrafts: Record<number, DayDraft> = {}
     train.days.forEach((day) => {
       nextDrafts[day.id] = {
@@ -809,7 +834,7 @@ export function AdminDashboardPage() {
     if (selectedDayId && !train.days.some((day) => day.id === selectedDayId)) {
       setSelectedDayId(null)
     }
-  }, [addDayForm, editForm, selectedDayId, selectedTrainQuery.data])
+  }, [addDayForm, editForm, globalEventForm, selectedDayId, selectedTrainQuery.data])
 
   const createMutation = useMutation({
     mutationFn: (values: CreateTrainValues) =>
@@ -906,6 +931,54 @@ export function AdminDashboardPage() {
         delivery_deadline: updated.default_delivery_time,
         admin_note: "",
       })
+    },
+  })
+
+  const saveGlobalEventMutation = useMutation({
+    mutationFn: (values: GlobalEventValues) =>
+      apiRequest(
+        "/api/admin/calendar-events",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            ...values,
+            note: values.note?.trim() || null,
+          }),
+        },
+        token,
+      ),
+    onSuccess: async () => {
+      setFeedback("האירוע הגלובלי נשמר והלוחות עודכנו.")
+      globalEventForm.reset({
+        date: selectedTrain?.start_date ?? todayIso,
+        title: "",
+        note: "",
+        blocks_meals: true,
+      })
+      await queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
+      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
+      if (selectedTrainId) {
+        await queryClient.invalidateQueries({ queryKey: ["meal-train", selectedTrainId] })
+      }
+    },
+  })
+
+  const deleteGlobalEventMutation = useMutation({
+    mutationFn: (eventId: number) =>
+      apiRequest<void>(
+        `/api/admin/calendar-events/${eventId}`,
+        {
+          method: "DELETE",
+        },
+        token,
+      ),
+    onSuccess: async () => {
+      setFeedback("האירוע הגלובלי הוסר והלוחות עודכנו.")
+      await queryClient.invalidateQueries({ queryKey: ["meal-trains"] })
+      await queryClient.invalidateQueries({ queryKey: ["admin-overview"] })
+      if (selectedTrainId) {
+        await queryClient.invalidateQueries({ queryKey: ["meal-train", selectedTrainId] })
+      }
     },
   })
 
@@ -1089,6 +1162,13 @@ export function AdminDashboardPage() {
   const selectedTrainIsArchived =
     selectedTrainEndDate != null && selectedTrainEndDate < getLocalTodayIso()
   const selectedTrainNotNeededDays = selectedTrain?.days.filter((day) => day.status === "not_needed").length ?? 0
+  const selectedTrainGlobalEvents = Array.from(
+    new Map(
+      (selectedTrain?.days ?? [])
+        .filter((day) => day.global_event)
+        .map((day) => [day.global_event!.id, day.global_event!]),
+    ).values(),
+  ).sort((left, right) => left.date.localeCompare(right.date))
 
   const errorMessage =
     (createMutation.error as ApiError | null)?.message ||
@@ -1096,6 +1176,8 @@ export function AdminDashboardPage() {
     (updateTrainMutation.error as ApiError | null)?.message ||
     (addDayMutation.error as ApiError | null)?.message ||
     (updateDayMutation.error as ApiError | null)?.message ||
+    (saveGlobalEventMutation.error as ApiError | null)?.message ||
+    (deleteGlobalEventMutation.error as ApiError | null)?.message ||
     (markVolunteerReminderMutation.error as ApiError | null)?.message ||
     (updateGiftMutation.error as ApiError | null)?.message ||
     (deleteTrainMutation.error as ApiError | null)?.message ||
@@ -1621,6 +1703,65 @@ export function AdminDashboardPage() {
                         <h4>לחיצה על יום פותחת חלון עריכה</h4>
                       </div>
                       <p className="muted">כאן רואים רק את הלוח והימים הפעילים של היולדת.</p>
+                    </div>
+
+                    <div className="calendar-events-admin">
+                      <form
+                        className="form-grid form-grid--compact"
+                        onSubmit={globalEventForm.handleSubmit((values) => saveGlobalEventMutation.mutate(values))}
+                      >
+                        <div className="field-row field-row--keep">
+                          <label className="field">
+                            <span>תאריך האירוע</span>
+                            <input type="date" {...globalEventForm.register("date")} />
+                          </label>
+                          <label className="field">
+                            <span>שם האירוע</span>
+                            <input {...globalEventForm.register("title")} placeholder="אירוע יישובי / חג / יום מיוחד" />
+                          </label>
+                        </div>
+
+                        <label className="field">
+                          <span>הערה קצרה</span>
+                          <input {...globalEventForm.register("note")} placeholder="אופציונלי" />
+                        </label>
+
+                        <label className="checkbox-field">
+                          <input type="checkbox" {...globalEventForm.register("blocks_meals")} />
+                          <span>הופך את היום ללא רלוונטי להרשמה בכל היולדות</span>
+                        </label>
+
+                        <button className="button button--secondary" type="submit" disabled={saveGlobalEventMutation.isPending}>
+                          {saveGlobalEventMutation.isPending ? "שומרת..." : "שמירת אירוע גלובלי"}
+                        </button>
+                      </form>
+
+                      {selectedTrainGlobalEvents.length ? (
+                        <div className="calendar-events-admin__list">
+                          {selectedTrainGlobalEvents.map((event) => (
+                            <article key={event.id} className="calendar-events-admin__item">
+                              <div>
+                                <strong>{event.title}</strong>
+                                <p className="muted">
+                                  {formatDatePair(event.date).short}
+                                  {event.blocks_meals ? " · חוסם הרשמה" : ""}
+                                  {event.note ? ` · ${event.note}` : ""}
+                                </p>
+                              </div>
+                              <button
+                                className="button button--ghost"
+                                type="button"
+                                disabled={deleteGlobalEventMutation.isPending}
+                                onClick={() => deleteGlobalEventMutation.mutate(event.id)}
+                              >
+                                הסרת אירוע
+                              </button>
+                            </article>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="muted">עדיין אין אירועים גלובליים בטווח של הלוח הזה.</p>
+                      )}
                     </div>
 
                     <MealCalendar
@@ -2304,6 +2445,18 @@ export function AdminDashboardPage() {
             ) : (
               <p className="muted">עדיין אין מבשלת רשומה ליום הזה.</p>
             )}
+
+            {selectedDay.global_event ? (
+              <div className="signup-preview signup-preview--event">
+                <p>
+                  <strong>אירוע גלובלי:</strong> {selectedDay.global_event.title}
+                </p>
+                {selectedDay.global_event.note ? <p>{selectedDay.global_event.note}</p> : null}
+                {selectedDay.global_event.blocks_meals ? (
+                  <p className="muted">כל עוד האירוע פעיל, היום סגור להרשמה ציבורית.</p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="form-grid">
               <div className="field-row">

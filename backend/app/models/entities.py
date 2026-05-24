@@ -61,6 +61,23 @@ class ReminderDispatchStatus(str, enum.Enum):
     failed = "failed"
 
 
+class GlobalCalendarEvent(Base):
+    __tablename__ = "global_calendar_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    date: Mapped[date] = mapped_column(Date, unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blocks_meals: Mapped[bool] = mapped_column(default=True, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class MealTrain(Base):
     __tablename__ = "meal_trains"
 

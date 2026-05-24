@@ -3,6 +3,17 @@ export type BabyTone = BabyType | "mixed"
 export type MealTrainStatus = "draft" | "published" | "completed"
 export type MealDayStatus = "open" | "assigned" | "not_needed"
 
+export interface GlobalCalendarEvent {
+  id: number
+  date: string
+  title: string
+  note: string | null
+  blocks_meals: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Signup {
   id: number
   volunteer_key: string | null
@@ -24,6 +35,7 @@ export interface MealDay {
   display_order: number
   admin_note: string | null
   signup: Signup | null
+  global_event: GlobalCalendarEvent | null
 }
 
 export interface IntakeForm {

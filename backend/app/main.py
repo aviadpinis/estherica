@@ -73,6 +73,25 @@ def ensure_schema() -> None:
             with engine.begin() as connection:
                 connection.execute(text("ALTER TABLE intake_forms ADD COLUMN home_phone TEXT"))
 
+    if "global_calendar_events" in inspector.get_table_names():
+        columns = {column["name"] for column in inspector.get_columns("global_calendar_events")}
+        if "note" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE global_calendar_events ADD COLUMN note TEXT"))
+        if "blocks_meals" not in columns:
+            with engine.begin() as connection:
+                if engine.dialect.name == "sqlite":
+                    connection.execute(
+                        text("ALTER TABLE global_calendar_events ADD COLUMN blocks_meals BOOLEAN DEFAULT 1 NOT NULL")
+                    )
+                else:
+                    connection.execute(
+                        text("ALTER TABLE global_calendar_events ADD COLUMN blocks_meals BOOLEAN DEFAULT TRUE NOT NULL")
+                    )
+        if "created_by" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE global_calendar_events ADD COLUMN created_by VARCHAR(160)"))
+
     encrypt_existing_rows(engine)
 
 app.add_middleware(

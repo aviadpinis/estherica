@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models.entities import BabyType, IntakeForm, MealDay, MealDayStatus, MealTrain, MealTrainStatus, Signup
+from app.models.entities import BabyType, GlobalCalendarEvent, IntakeForm, MealDay, MealDayStatus, MealTrain, MealTrainStatus, Signup
 from app.schemas.meal_trains import (
     IntakeSubmission,
     MealDayResponse,
@@ -32,6 +32,7 @@ from app.services.meal_trains import (
     generate_token,
     sync_default_days,
 )
+from app.services.calendar_events import build_meal_day_response, get_effective_meal_day_status, load_global_events_for_dates, load_global_events_for_train
 
 
 router = APIRouter(prefix="/api/public", tags=["public"])
@@ -53,18 +54,24 @@ def _normalize_family_title(family_name: str) -> str:
     return f"משפחת {cleaned}"
 
 
-def _future_day_buckets(train: MealTrain) -> tuple[list[MealDay], list[MealDay]]:
+def _future_day_buckets(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> tuple[list[MealDay], list[MealDay]]:
     today = _today_in_project_timezone()
     future_days = [day for day in train.days if day.date >= today]
-    open_days = [day for day in future_days if day.status == MealDayStatus.open]
+    open_days = [day for day in future_days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.open]
     return future_days, open_days
 
 
-def _day_status_counts(train: MealTrain) -> dict[str, int]:
+def _day_status_counts(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> dict[str, int]:
     return {
-        "open": sum(1 for day in train.days if day.status == MealDayStatus.open),
-        "assigned": sum(1 for day in train.days if day.status == MealDayStatus.assigned),
-        "not_needed": sum(1 for day in train.days if day.status == MealDayStatus.not_needed),
+        "open": sum(
+            1 for day in train.days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.open
+        ),
+        "assigned": sum(
+            1 for day in train.days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.assigned
+        ),
+        "not_needed": sum(
+            1 for day in train.days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.not_needed
+        ),
         "total": len(train.days),
     }
 
@@ -93,7 +100,9 @@ def _get_train_by_public_token(db: Session, token: str) -> MealTrain:
     return train
 
 
-def _build_related_trains(db: Session, current_train_id: int) -> list[PublicMealTrainSuggestion]:
+def _build_related_trains(
+    db: Session, current_train_id: int, event_map: dict[date, GlobalCalendarEvent] | None = None
+) -> list[PublicMealTrainSuggestion]:
     trains = (
         db.query(MealTrain)
         .options(joinedload(MealTrain.days))
@@ -108,7 +117,8 @@ def _build_related_trains(db: Session, current_train_id: int) -> list[PublicMeal
 
     suggestions: list[PublicMealTrainSuggestion] = []
     for train in trains:
-        _, open_days = _future_day_buckets(train)
+        train_event_map = event_map if event_map is not None else load_global_events_for_train(db, train)
+        _, open_days = _future_day_buckets(train, train_event_map)
         open_days = sorted(open_days, key=lambda day: day.date)
         if not open_days:
             continue
@@ -130,13 +140,19 @@ def _build_related_trains(db: Session, current_train_id: int) -> list[PublicMeal
     return suggestions
 
 
-def _build_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
-    future_days, open_days = _future_day_buckets(train)
-    visible_days = [day for day in future_days if day.status in (MealDayStatus.open, MealDayStatus.assigned)]
+def _build_lobby_train(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> PublicLobbyTrainResponse | None:
+    future_days, open_days = _future_day_buckets(train, event_map)
+    visible_days = [
+        day
+        for day in future_days
+        if get_effective_meal_day_status(day, event_map.get(day.date)) in (MealDayStatus.open, MealDayStatus.assigned)
+    ]
     if not visible_days:
         return None
 
-    assigned_days = [day for day in visible_days if day.status == MealDayStatus.assigned]
+    assigned_days = [
+        day for day in visible_days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.assigned
+    ]
     end_date = max((day.date for day in visible_days), default=None)
     next_open_day = min((day.date for day in open_days), default=None)
 
@@ -154,7 +170,7 @@ def _build_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
     )
 
 
-def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | None:
+def _build_recent_lobby_train(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> PublicLobbyTrainResponse | None:
     today = _today_in_project_timezone()
     recent_cutoff = today - timedelta(days=30)
     schedule_end = max((day.date for day in train.days), default=None)
@@ -164,12 +180,15 @@ def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | No
     recent_days = [
         day
         for day in train.days
-        if recent_cutoff <= day.date <= schedule_end and day.status in (MealDayStatus.assigned, MealDayStatus.not_needed)
+        if recent_cutoff <= day.date <= schedule_end
+        and get_effective_meal_day_status(day, event_map.get(day.date)) in (MealDayStatus.assigned, MealDayStatus.not_needed)
     ]
     if not recent_days:
         return None
 
-    assigned_days = [day for day in recent_days if day.status == MealDayStatus.assigned]
+    assigned_days = [
+        day for day in recent_days if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.assigned
+    ]
     if not assigned_days:
         return None
 
@@ -191,6 +210,7 @@ def _build_recent_lobby_train(train: MealTrain) -> PublicLobbyTrainResponse | No
 @router.get("/intake/{token}", response_model=PublicIntakeResponse)
 def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
+    event_map = load_global_events_for_train(db, train)
     return PublicIntakeResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
@@ -203,7 +223,7 @@ def get_intake_form(token: str, db: Session = Depends(get_db)) -> PublicIntakeRe
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
-        days=[MealDayResponse.model_validate(day) for day in train.days],
+        days=[build_meal_day_response(day, event_map.get(day.date)) for day in train.days],
     )
 
 
@@ -214,7 +234,8 @@ def submit_intake_form(
     db: Session = Depends(get_db),
 ) -> PublicIntakeResponse:
     train = _get_train_by_intake_token(db, token)
-    before_counts = _day_status_counts(train)
+    event_map = load_global_events_for_train(db, train)
+    before_counts = _day_status_counts(train, event_map)
     needed_count = sum(1 for choice in payload.day_choices if choice.needed)
     not_needed_count = len(payload.day_choices) - needed_count
 
@@ -273,7 +294,8 @@ def submit_intake_form(
 
     db.commit()
     db.refresh(train)
-    after_counts = _day_status_counts(train)
+    event_map = load_global_events_for_train(db, train)
+    after_counts = _day_status_counts(train, event_map)
     log_level = logging.WARNING if needed_count == 0 and payload.day_choices else logging.INFO
     logger.log(
         log_level,
@@ -300,7 +322,7 @@ def submit_intake_form(
         start_date=train.start_date,
         default_delivery_time=train.default_delivery_time,
         reminder_time=train.reminder_time,
-        days=[MealDayResponse.model_validate(day) for day in train.days],
+        days=[build_meal_day_response(day, event_map.get(day.date)) for day in train.days],
     )
 
 
@@ -308,6 +330,7 @@ def submit_intake_form(
 def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> PublicMealTrainResponse:
     train = _get_train_by_public_token(db, public_token)
     intake = train.intake_form
+    event_map = load_global_events_for_train(db, train)
     return PublicMealTrainResponse(
         family_title=train.family_title,
         mother_name=train.mother_name,
@@ -323,7 +346,7 @@ def get_public_meal_train(public_token: str, db: Session = Depends(get_db)) -> P
         special_requirements=intake.special_requirements if intake else None,
         kashrut=intake.kashrut if intake else None,
         contact_phone=intake.contact_phone if intake and intake.contact_phone else train.contact_phone,
-        days=[MealDayResponse.model_validate(day) for day in train.days],
+        days=[build_meal_day_response(day, event_map.get(day.date)) for day in train.days],
         related_trains=_build_related_trains(db, train.id),
     )
 
@@ -338,14 +361,15 @@ def get_public_lobby(db: Session = Depends(get_db)) -> PublicLobbyResponse:
         .all()
     )
 
-    active_trains = [entry for train in trains if (entry := _build_lobby_train(train)) is not None]
+    event_map = load_global_events_for_dates(db, {day.date for train in trains for day in train.days})
+    active_trains = [entry for train in trains if (entry := _build_lobby_train(train, event_map)) is not None]
     active_trains.sort(
         key=lambda train: (
             0 if train.open_days > 0 else 1,
             train.next_open_date or train.end_date or train.start_date,
         )
     )
-    recent_trains = [entry for train in trains if (entry := _build_recent_lobby_train(train)) is not None]
+    recent_trains = [entry for train in trains if (entry := _build_recent_lobby_train(train, event_map)) is not None]
     recent_trains.sort(
         key=lambda train: (train.end_date or train.start_date),
         reverse=True,
@@ -457,6 +481,9 @@ def create_signup(day_id: int, payload: SignupCreate, db: Session = Depends(get_
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Day not found.")
     if meal_day.meal_train.status != MealTrainStatus.published:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This meal train is not published yet.")
+    event_map = load_global_events_for_dates(db, {meal_day.date})
+    if get_effective_meal_day_status(meal_day, event_map.get(meal_day.date)) != MealDayStatus.open:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This day is no longer available.")
     if meal_day.status != MealDayStatus.open:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This day is no longer available.")
     if meal_day.signup is not None:
@@ -517,4 +544,5 @@ def cancel_signup(day_id: int, payload: SignupCancelRequest, db: Session = Depen
         signup.volunteer_name,
         signup.phone,
     )
-    return MealDayResponse.model_validate(meal_day)
+    event_map = load_global_events_for_dates(db, {meal_day.date})
+    return build_meal_day_response(meal_day, event_map.get(meal_day.date))

@@ -7,12 +7,24 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.dependencies import get_current_admin
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models.entities import Admin, BabyType, MealDay, MealDayStatus, MealTrain, MealTrainStatus, Signup, SignupStatus
+from app.models.entities import (
+    Admin,
+    BabyType,
+    GlobalCalendarEvent,
+    MealDay,
+    MealDayStatus,
+    MealTrain,
+    MealTrainStatus,
+    Signup,
+    SignupStatus,
+)
 from app.schemas.meal_trains import (
     AdminAttentionTrain,
     AdminOverviewResponse,
     AdminUpcomingAssignment,
     AdminVolunteerStats,
+    GlobalCalendarEventCreate,
+    GlobalCalendarEventResponse,
     MealDayCreate,
     MealDayResponse,
     MealDayUpdate,
@@ -21,6 +33,13 @@ from app.schemas.meal_trains import (
     MealTrainSummary,
     MealTrainUpdate,
     VolunteerReminderMarkResponse,
+)
+from app.services.calendar_events import (
+    build_global_event_response,
+    build_meal_day_response,
+    get_effective_meal_day_status,
+    load_global_events_for_dates,
+    load_global_events_for_train,
 )
 from app.services.meal_trains import build_default_days, generate_token, sync_default_days, validate_schedule_window
 
@@ -36,18 +55,19 @@ def _today_in_project_timezone() -> date:
         return date.today()
 
 
-def _build_summary(train: MealTrain) -> MealTrainSummary:
+def _build_summary(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> MealTrainSummary:
     open_days = 0
     assigned_days = 0
     today = _today_in_project_timezone()
     urgent_until = today.fromordinal(today.toordinal() + 3)
     urgent_open_days = 0
     for day in train.days:
-        if day.status == MealDayStatus.open and day.date >= today:
+        effective_status = get_effective_meal_day_status(day, event_map.get(day.date))
+        if effective_status == MealDayStatus.open and day.date >= today:
             open_days += 1
             if day.date <= urgent_until:
                 urgent_open_days += 1
-        if day.status == MealDayStatus.assigned:
+        if effective_status == MealDayStatus.assigned:
             assigned_days += 1
 
     end_date = max((day.date for day in train.days), default=None)
@@ -93,7 +113,7 @@ def _build_summary(train: MealTrain) -> MealTrainSummary:
     )
 
 
-def _build_detail(train: MealTrain) -> MealTrainDetail:
+def _build_detail(train: MealTrain, event_map: dict[date, GlobalCalendarEvent]) -> MealTrainDetail:
     return MealTrainDetail(
         id=train.id,
         family_title=train.family_title,
@@ -115,13 +135,17 @@ def _build_detail(train: MealTrain) -> MealTrainDetail:
         created_at=train.created_at,
         updated_at=train.updated_at,
         intake_form=train.intake_form,
-        days=[MealDayResponse.model_validate(day) for day in train.days],
+        days=[build_meal_day_response(day, event_map.get(day.date)) for day in train.days],
     )
 
 
-def _get_next_open_date(train: MealTrain, today: date) -> date | None:
+def _get_next_open_date(train: MealTrain, today: date, event_map: dict[date, GlobalCalendarEvent]) -> date | None:
     return min(
-        (day.date for day in train.days if day.status == MealDayStatus.open and day.date >= today),
+        (
+            day.date
+            for day in train.days
+            if get_effective_meal_day_status(day, event_map.get(day.date)) == MealDayStatus.open and day.date >= today
+        ),
         default=None,
     )
 
@@ -152,7 +176,8 @@ def list_meal_trains(
         .order_by(MealTrain.created_at.desc())
         .all()
     )
-    return [_build_summary(train) for train in trains]
+    event_map = load_global_events_for_dates(db, {day.date for train in trains for day in train.days})
+    return [_build_summary(train, event_map) for train in trains]
 
 
 @router.get("/overview", response_model=AdminOverviewResponse)
@@ -167,7 +192,8 @@ def get_admin_overview(
         .all()
     )
 
-    summaries = [_build_summary(train) for train in trains]
+    event_map = load_global_events_for_dates(db, {day.date for train in trains for day in train.days})
+    summaries = [_build_summary(train, event_map) for train in trains]
     summary_by_id = {summary.id: summary for summary in summaries}
     today = _today_in_project_timezone()
     reminder_window_start = date.fromordinal(today.toordinal() - 30)
@@ -179,7 +205,7 @@ def get_admin_overview(
 
     for train in trains:
         summary = summary_by_id[train.id]
-        next_open_date = _get_next_open_date(train, today)
+        next_open_date = _get_next_open_date(train, today, event_map)
         if not summary.is_archived and summary.open_days > 0:
             attention_trains.append(
                 AdminAttentionTrain(
@@ -305,7 +331,8 @@ def create_meal_train(
     db.add(train)
     db.commit()
     db.refresh(train)
-    return _build_detail(_get_train_or_404(db, train.id))
+    hydrated_train = _get_train_or_404(db, train.id)
+    return _build_detail(hydrated_train, load_global_events_for_train(db, hydrated_train))
 
 
 @router.get("/meal-trains/{train_id}", response_model=MealTrainDetail)
@@ -314,7 +341,8 @@ def get_meal_train(
     _: Admin = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> MealTrainDetail:
-    return _build_detail(_get_train_or_404(db, train_id))
+    train = _get_train_or_404(db, train_id)
+    return _build_detail(train, load_global_events_for_train(db, train))
 
 
 @router.patch("/meal-trains/{train_id}", response_model=MealTrainDetail)
@@ -368,7 +396,8 @@ def update_meal_train(
         sync_default_days(train, train.default_delivery_time)
 
     db.commit()
-    return _build_detail(_get_train_or_404(db, train_id))
+    hydrated_train = _get_train_or_404(db, train_id)
+    return _build_detail(hydrated_train, load_global_events_for_train(db, hydrated_train))
 
 
 @router.post("/meal-trains/{train_id}/publish", response_model=MealTrainDetail)
@@ -381,7 +410,8 @@ def publish_meal_train(
     train.status = MealTrainStatus.published
     train.published_at = datetime.now(UTC)
     db.commit()
-    return _build_detail(_get_train_or_404(db, train_id))
+    hydrated_train = _get_train_or_404(db, train_id)
+    return _build_detail(hydrated_train, load_global_events_for_train(db, hydrated_train))
 
 
 @router.delete("/meal-trains/{train_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -424,7 +454,49 @@ def add_meal_day(
     )
     db.add(meal_day)
     db.commit()
-    return _build_detail(_get_train_or_404(db, train_id))
+    hydrated_train = _get_train_or_404(db, train_id)
+    return _build_detail(hydrated_train, load_global_events_for_train(db, hydrated_train))
+
+
+@router.post("/calendar-events", response_model=GlobalCalendarEventResponse, status_code=status.HTTP_201_CREATED)
+def upsert_global_calendar_event(
+    payload: GlobalCalendarEventCreate,
+    admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> GlobalCalendarEventResponse:
+    event = db.query(GlobalCalendarEvent).filter(GlobalCalendarEvent.date == payload.date).first()
+    if event is None:
+        event = GlobalCalendarEvent(
+            date=payload.date,
+            title=payload.title.strip(),
+            note=payload.note.strip() if payload.note else None,
+            blocks_meals=payload.blocks_meals,
+            created_by=admin.full_name.strip() if admin.full_name else admin.email,
+        )
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+        return build_global_event_response(event)
+
+    event.title = payload.title.strip()
+    event.note = payload.note.strip() if payload.note else None
+    event.blocks_meals = payload.blocks_meals
+    db.commit()
+    db.refresh(event)
+    return build_global_event_response(event)
+
+
+@router.delete("/calendar-events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_global_calendar_event(
+    event_id: int,
+    _: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    event = db.query(GlobalCalendarEvent).filter(GlobalCalendarEvent.id == event_id).first()
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calendar event not found.")
+    db.delete(event)
+    db.commit()
 
 
 @router.patch("/meal-days/{day_id}", response_model=MealDayResponse)
@@ -481,7 +553,8 @@ def update_meal_day(
 
     db.commit()
     db.refresh(meal_day)
-    return MealDayResponse.model_validate(meal_day)
+    event_map = load_global_events_for_dates(db, {meal_day.date})
+    return build_meal_day_response(meal_day, event_map.get(meal_day.date))
 
 
 @router.post("/meal-days/{day_id}/volunteer-reminder", response_model=VolunteerReminderMarkResponse)

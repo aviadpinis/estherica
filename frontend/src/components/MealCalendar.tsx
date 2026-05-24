@@ -1,4 +1,5 @@
 import { formatDatePair, formatWeekdayShort, getLocalTodayIso } from "../lib/date"
+import { getJewishHolidayLabel } from "../lib/hebrewCalendar"
 import { getBabyTone } from "../lib/baby"
 import type { BabyTone, MealDay } from "../lib/types"
 
@@ -83,6 +84,9 @@ function getCellState(
   }
 
   if (mode === "intake") {
+    if (cell.day.global_event?.blocks_meals) {
+      return "not-needed"
+    }
     return selectionMap?.[cell.day.id] === false ? "not-needed" : "open"
   }
 
@@ -117,10 +121,13 @@ export function MealCalendar({
     const weekday = formatWeekdayShort(cell.iso)
     const state = getCellState(cell, mode, selectionMap, todayIso)
     const isSelected = selectedDayId != null && cell.day?.id === selectedDayId
+    const holidayLabel = getJewishHolidayLabel(cell.iso)
+    const globalEvent = cell.day?.global_event ?? null
     const className = [
       "calendar-card",
       `calendar-card--${tone}`,
       `calendar-card--${state}`,
+      globalEvent ? "calendar-card--with-event" : "",
       isSelected ? "calendar-card--selected" : "",
     ]
       .filter(Boolean)
@@ -131,7 +138,7 @@ export function MealCalendar({
     const interactive =
       cell.day &&
       !cell.isWeekend &&
-      ((mode === "intake" && onToggleNeeded) ||
+      ((mode === "intake" && onToggleNeeded && !cell.day.global_event?.blocks_meals) ||
         (mode === "public" && state === "open" && onSelectDay) ||
         (mode === "admin" && onSelectDay))
 
@@ -145,6 +152,12 @@ export function MealCalendar({
           <strong>{labels.hebrew}</strong>
           <p>{labels.english}</p>
         </div>
+        {holidayLabel || globalEvent ? (
+          <div className="calendar-card__markers">
+            {holidayLabel ? <span className="calendar-card__marker">{holidayLabel}</span> : null}
+            {globalEvent ? <span className="calendar-card__marker calendar-card__marker--event">{globalEvent.title}</span> : null}
+          </div>
+        ) : null}
         <div className="calendar-card__footer">
           {cell.isWeekend ? <span>שישי / שבת</span> : null}
           {!cell.isWeekend && !cell.day ? <span>לא פעיל</span> : null}
@@ -156,6 +169,7 @@ export function MealCalendar({
           {mode !== "intake" && state === "open" ? <span>פנוי</span> : null}
           {mode !== "intake" && state === "not-needed" ? <span>לא צריך</span> : null}
           {state === "assigned" ? <span>תפוס</span> : null}
+          {globalEvent?.note ? <span>{globalEvent.note}</span> : null}
         </div>
         {volunteerName ? (
           <div className="calendar-card__signup">

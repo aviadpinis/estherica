@@ -407,6 +407,10 @@ img {
   gap: 16px;
 }
 
+.form-grid--compact {
+  gap: 12px;
+}
+
 .form-actions {
   display: grid;
   gap: 10px;
@@ -1211,6 +1215,32 @@ img {
   background: rgba(23, 18, 15, 0.05);
 }
 
+.signup-preview--event {
+  background: rgba(185, 106, 43, 0.1);
+}
+
+.calendar-events-admin {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.calendar-events-admin__list {
+  display: grid;
+  gap: 10px;
+}
+
+.calendar-events-admin__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(23, 18, 15, 0.08);
+}
+
 .feedback {
   border-radius: 18px;
   padding: 14px 18px;
@@ -1406,6 +1436,28 @@ button.calendar-card {
   color: var(--muted);
 }
 
+.calendar-card__markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.calendar-card__marker {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.77rem;
+  font-weight: 800;
+  background: rgba(23, 18, 15, 0.08);
+  color: var(--ink);
+}
+
+.calendar-card__marker--event {
+  background: rgba(185, 106, 43, 0.16);
+  color: #6d3b16;
+}
+
 .calendar-card__footer {
   font-weight: 700;
 }
@@ -1483,6 +1535,10 @@ button.calendar-card {
 .calendar-card--not-needed,
 .calendar-card--missing {
   background: linear-gradient(180deg, #f2ede7, #e7ddd1);
+}
+
+.calendar-card--with-event {
+  border-color: rgba(185, 106, 43, 0.28);
 }
 
 .calendar-card--weekend,
@@ -1989,7 +2045,8 @@ button.calendar-card {
   }
 
   .reminder-card,
-  .related-train-card {
+  .related-train-card,
+  .calendar-events-admin__item {
     flex-direction: column;
     align-items: stretch;
   }
