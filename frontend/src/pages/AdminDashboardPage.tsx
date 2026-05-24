@@ -65,6 +65,7 @@ const editTrainSchema = z.object({
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
   household_size: z.string().optional(),
   children_ages: z.string().optional(),
+  kashrut: z.string().optional(),
   lobby_visible: z.boolean().optional(),
 }).superRefine((values, ctx) => {
   const scheduleError = getScheduleWindowError(values.birth_date, values.start_date)
@@ -657,6 +658,10 @@ export function AdminDashboardPage() {
       start_date: todayIso,
       default_delivery_time: "18:00",
       reminder_time: "09:00",
+      household_size: "",
+      children_ages: "",
+      kashrut: "",
+      lobby_visible: true,
     },
   })
 
@@ -776,6 +781,8 @@ export function AdminDashboardPage() {
       reminder_time: train.reminder_time,
       household_size: train.intake_form?.household_size ?? "",
       children_ages: train.intake_form?.children_ages ?? "",
+      kashrut: train.intake_form?.kashrut ?? "",
+      lobby_visible: train.lobby_visible,
     })
 
     addDayForm.reset({
@@ -1677,6 +1684,15 @@ export function AdminDashboardPage() {
                           />
                         </label>
                       </div>
+
+                      <label className="field">
+                        <span>כשרויות</span>
+                        <input
+                          {...editForm.register("kashrut")}
+                          disabled={!selectedTrain.intake_form}
+                          placeholder={selectedTrain.intake_form ? "" : "יתעדכן אחרי מילוי השאלון"}
+                        />
+                      </label>
 
                       <div className="field-row">
                         <label className="field">

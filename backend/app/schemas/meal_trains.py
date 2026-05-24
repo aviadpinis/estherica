@@ -132,6 +132,7 @@ class MealTrainUpdate(BaseModel):
     reminder_time: str | None = None
     household_size: str | None = None
     children_ages: str | None = None
+    kashrut: str | None = None
     gift_delivered: bool | None = None
     lobby_visible: bool | None = None
     status: str | None = None
