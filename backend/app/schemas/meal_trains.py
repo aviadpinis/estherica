@@ -130,6 +130,7 @@ class MealTrainUpdate(BaseModel):
     start_date: date | None = None
     default_delivery_time: str | None = None
     reminder_time: str | None = None
+    address: str | None = None
     household_size: str | None = None
     children_ages: str | None = None
     kashrut: str | None = None

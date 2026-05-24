@@ -63,6 +63,7 @@ const editTrainSchema = z.object({
   start_date: z.string().min(1, "צריך לבחור ממתי לפתוח את הלוח"),
   default_delivery_time: z.string().regex(/^\d{2}:\d{2}$/),
   reminder_time: z.string().regex(/^\d{2}:\d{2}$/),
+  address: z.string().optional(),
   household_size: z.string().optional(),
   children_ages: z.string().optional(),
   kashrut: z.string().optional(),
@@ -658,6 +659,7 @@ export function AdminDashboardPage() {
       start_date: todayIso,
       default_delivery_time: "18:00",
       reminder_time: "09:00",
+      address: "",
       household_size: "",
       children_ages: "",
       kashrut: "",
@@ -779,6 +781,7 @@ export function AdminDashboardPage() {
       start_date: train.start_date,
       default_delivery_time: train.default_delivery_time,
       reminder_time: train.reminder_time,
+      address: train.intake_form?.address ?? "",
       household_size: train.intake_form?.household_size ?? "",
       children_ages: train.intake_form?.children_ages ?? "",
       kashrut: train.intake_form?.kashrut ?? "",
@@ -1684,6 +1687,15 @@ export function AdminDashboardPage() {
                           />
                         </label>
                       </div>
+
+                      <label className="field">
+                        <span>כתובת</span>
+                        <input
+                          {...editForm.register("address")}
+                          disabled={!selectedTrain.intake_form}
+                          placeholder={selectedTrain.intake_form ? "" : "יתעדכן אחרי מילוי השאלון"}
+                        />
+                      </label>
 
                       <label className="field">
                         <span>כשרויות</span>

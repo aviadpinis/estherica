@@ -360,7 +360,7 @@ def update_meal_train(
     if train.intake_form is not None:
         if "contact_phone" in updates and updates["contact_phone"]:
             train.intake_form.contact_phone = updates["contact_phone"]
-        for field in ("household_size", "children_ages", "kashrut"):
+        for field in ("address", "household_size", "children_ages", "kashrut"):
             if field in updates:
                 setattr(train.intake_form, field, updates[field] or None)
 
