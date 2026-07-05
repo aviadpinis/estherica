@@ -1917,7 +1917,7 @@ export function AdminDashboardPage() {
 
                       <div className="field-row field-row--tight">
                         <label className="field">
-                          <span>שעת הבאת אוכל</span>
+                          <span>שעת הבאה רצויה</span>
                           <input type="time" {...editForm.register("default_delivery_time")} />
                         </label>
                         <label className="field">
@@ -2178,7 +2178,7 @@ export function AdminDashboardPage() {
 
               <div className="field-row field-row--tight">
                 <label className="field">
-                  <span>שעת הבאת אוכל</span>
+                  <span>שעת הבאה רצויה</span>
                   <input type="time" {...createForm.register("default_delivery_time")} />
                 </label>
                 <label className="field">

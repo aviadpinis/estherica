@@ -388,12 +388,18 @@ def update_meal_train(
     if train.intake_form is not None:
         if "contact_phone" in updates and updates["contact_phone"]:
             train.intake_form.contact_phone = updates["contact_phone"]
+        if "default_delivery_time" in updates and updates["default_delivery_time"]:
+            train.intake_form.delivery_deadline = updates["default_delivery_time"]
         for field in ("address", "household_size", "children_ages", "kashrut"):
             if field in updates:
                 setattr(train.intake_form, field, updates[field] or None)
 
     if any(field in updates for field in ("is_twins", "birth_date", "start_date", "default_delivery_time")):
         sync_default_days(train, train.default_delivery_time)
+
+    if "default_delivery_time" in updates and updates["default_delivery_time"]:
+        for day in train.days:
+            day.delivery_deadline = updates["default_delivery_time"]
 
     db.commit()
     hydrated_train = _get_train_or_404(db, train_id)
